@@ -2,9 +2,10 @@ open Keiko
 open Util
 
     
-type pattern = NonTerm of string
-             | Term of Keiko.inst
-             | PNode of Keiko.inst * pattern list
+type pattern =
+    | NonTerm of string
+    | Term of Keiko.inst
+    | PNode of Keiko.inst * pattern list
              
 type ('a, 'b) either = Left of 'a | Right of 'b
 
@@ -17,7 +18,7 @@ type 'a cost_map = (string, int * 'a rule) Hashtbl.t
 type 'a dp = DP of inst * ('a dp) list * 'a cost_map
 
 let string_of_op op = match op with
-      Plus -> "+" 
+    | Plus -> "+" 
     | Minus -> "-"
     | Times -> "*"
     | Div -> "/"
@@ -41,7 +42,7 @@ let string_of_op op = match op with
     | BitNot-> "~"
 
 let string_of_inst instr = match instr with
-      CONST k -> "CONST " ^ (string_of_int k)
+    | CONST k -> "CONST " ^ (string_of_int k)
     | GLOBAL g -> "GLOBAL " ^ g
     | LOCAL l -> "LOCAL " ^ (string_of_int l)
     | REGVAR r -> "REGVAR " ^ (string_of_int r)
@@ -90,7 +91,7 @@ let same_instr left right = match left, right with
     | _, _ -> false
 
 let rec string_of_pattern pat = match pat with
-      NonTerm nt -> nt
+    | NonTerm nt -> nt
     | Term t -> string_of_inst t
     | PNode (t, children) -> (string_of_inst t) ^ " <" ^ (String.concat ", " (List.map string_of_pattern children)) ^ ">"
 
@@ -98,21 +99,19 @@ let print_rule rule = match rule with Rule (nonterm, pat, cost, gen) -> print_en
 
 let rec print_dp dp = match dp with DP (instr, children, costs) -> (print_string ("DP " ^ string_of_inst instr); Hashtbl.iter (fun k v -> print_string (k ^ " ")) costs; print_newline (); List.iter print_dp children)
 
-let rec sum_list l = match l with
-      [] -> 0
-    | x :: xs -> x + sum_list xs
+let sum_list = List.fold_left (+) 0
     
 let option_is_none opt = match opt with
-      Some _ -> false
+    | Some _ -> false
     | None -> true
     
 let option_get opt = match opt with
-      Some v -> v
+    | Some v -> v
     | None -> raise (Invalid_argument "option_get")
 
 let rec pattern_cost pat tree = match tree with
     DP (instr, children, costs) -> match pat with
-          NonTerm nonterm -> if Hashtbl.mem costs nonterm then Some (fst (Hashtbl.find costs nonterm)) else None
+        | NonTerm nonterm -> if Hashtbl.mem costs nonterm then Some (fst (Hashtbl.find costs nonterm)) else None
         | Term term -> if same_instr instr term then Some 0 else None
         | PNode (term, pats) -> if same_instr term instr && List.length pats = List.length children
                                 then let children_costs = List.map2 pattern_cost pats children in 
@@ -136,7 +135,7 @@ let rec dp_of_optree num_rules tree = match tree with
 
     
 let rec get_pattern_args pat dp = match dp with DP (instr, children, costs) -> match pat with
-      Term term -> [Right instr]
+    | Term term -> [Right instr]
     | NonTerm nonterm -> [Left (emit_code nonterm dp)]
     | PNode (term, pats) -> (Right instr) :: List.concat (List.map2 get_pattern_args pats children)
 and emit_code symbol dp = match dp with DP (instr, children, costs) ->
