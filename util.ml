@@ -25,3 +25,4 @@ let make_hash n ps =
   List.iter (function (x, y) -> Hashtbl.add table x y) ps;
   table
 
+type 'a list_tree = Node of 'a * 'a list_tree list

@@ -7,6 +7,7 @@ open Mach
 open Keiko
 open Lexer
 open Print
+open Util
 
 let boundchk = ref false
 let optlevel = ref 0

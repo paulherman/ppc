@@ -2,6 +2,7 @@
 (* ppcpi/simp.mlp *)
 
 open Keiko
+open Util
 
 (* |add_offset| -- add numeric offset to an address *)
 let rec add_offset n =

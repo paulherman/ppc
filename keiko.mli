@@ -70,7 +70,7 @@ val negate : op -> op
 (* Operator trees *)
 
 (* |optree| -- type of operator trees *)
-type optree = Node of inst * optree list
+type optree = inst Util.list_tree
 
 (* |canon| -- eliminate SEQ, NOP, AFTER nodes *)
 val canon : optree -> optree list

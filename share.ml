@@ -4,6 +4,7 @@
 open Print
 open Keiko
 open Mach
+open Util
 
 (* |dagnode| -- node in DAG representation of an expression *)
 type dagnode =

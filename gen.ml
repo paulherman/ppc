@@ -131,7 +131,7 @@ let apply_rule tree rule = match rule, tree with Rule (nonterm, pat, rule_cost, 
 let rec apply_rules rules tree = match tree with DP (instr, children, costs) -> List.iter (apply_rules rules) children; List.iter (apply_rule tree) rules
 
 let rec dp_of_optree num_rules tree = match tree with
-    Keiko.Node (instr, children) -> DP (instr, List.map (dp_of_optree num_rules) children, Hashtbl.create num_rules)
+    Util.Node (instr, children) -> DP (instr, List.map (dp_of_optree num_rules) children, Hashtbl.create num_rules)
 
     
 let rec get_pattern_args pat dp = match dp with DP (instr, children, costs) -> match pat with

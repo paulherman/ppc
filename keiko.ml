@@ -2,6 +2,7 @@
 (* ppc/keiko.ml *)
 
 open Print
+open Util
 
 (* |symbol| -- global symbols *)
 type symbol = string
@@ -146,7 +147,7 @@ let negate =
 
 (* Operator trees *)
 
-type optree = Node of inst * optree list
+type optree = inst Util.list_tree
 
 let rec canon_app t us =
   match t with

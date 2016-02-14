@@ -2,6 +2,7 @@
 (* ppcpi/jumpopt.mlp *)
 
 open Keiko
+open Util
 
 (* Disjoint sets of labels *)
 

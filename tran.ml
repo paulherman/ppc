@@ -5,6 +5,7 @@ open Keiko
 open Target
 open Regs
 open Print
+open Util
 
 let debug = ref 0
 

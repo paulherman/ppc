@@ -16,10 +16,10 @@ let spec =
       "-O", Arg.Unit (fun () -> Kgen.optlevel := 1), " enable optimiser";
       "-O2", Arg.Unit (fun () -> Kgen.optlevel := 2), " more optimisation"]
       
-let ir_0 = Keiko.Node (Keiko.STOREW, [Keiko.Node (Keiko.CONST 35, []); Keiko.Node (Keiko.LOCAL 4, [])])
-let ir_1 = Keiko.Node (Keiko.DEFTMP 1, [Keiko.Node (Keiko.LOADW, [Keiko.Node (Keiko.LOCAL 0, [])])])
-let ir_2 = Keiko.Node (Keiko.DEFTMP 2, [Keiko.Node (Keiko.BINOP Keiko.Minus, [Keiko.Node (Keiko.TEMP 1, []); Keiko.Node (Keiko.LOADW, [Keiko.Node (Keiko.LOCAL 4, [])])])])
-let ir_3 = Keiko.Node (Keiko.BINOP Keiko.Plus, [Keiko.Node (Keiko.BINOP Keiko.Times, [Keiko.Node (Keiko.TEMP 2, []); Keiko.Node (Keiko.TEMP 2, [])]); Keiko.Node (Keiko.TEMP 1, [])])
+let ir_0 = Util.Node (Keiko.STOREW, [Util.Node (Keiko.CONST 35, []); Util.Node (Keiko.LOCAL 4, [])])
+let ir_1 = Util.Node (Keiko.DEFTMP 1, [Util.Node (Keiko.LOADW, [Util.Node (Keiko.LOCAL 0, [])])])
+let ir_2 = Util.Node (Keiko.DEFTMP 2, [Util.Node (Keiko.BINOP Keiko.Minus, [Util.Node (Keiko.TEMP 1, []); Util.Node (Keiko.LOADW, [Util.Node (Keiko.LOCAL 4, [])])])])
+let ir_3 = Util.Node (Keiko.BINOP Keiko.Plus, [Util.Node (Keiko.BINOP Keiko.Times, [Util.Node (Keiko.TEMP 2, []); Util.Node (Keiko.TEMP 2, [])]); Util.Node (Keiko.TEMP 1, [])])
 let irs = [ir_0; ir_1; ir_2; ir_3]
 
 let main () =
