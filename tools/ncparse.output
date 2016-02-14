@@ -1,0 +1,410 @@
+   0  $accept : %entry% $end
+
+   1  text : prog EOF
+
+   2  prog :
+   3       | prog WORD
+   4       | prog SPACE
+   5       | prog CLOSE
+   6       | prog LPAREN
+   7       | prog RPAREN
+   8       | prog COMMA
+   9       | prog ATSIGN
+  10       | prog CHAR
+  11       | prog node
+
+  12  node : OPEN bal1 args CLOSE
+
+  13  bal1 : bal
+
+  14  args :
+  15       | COMMA blank arglist
+  16       | COMMA blank ATSIGN bal
+
+  17  arglist : bal
+  18          | arglist COMMA bal
+
+  19  bal :
+  20      | bal item
+  21      | bal LPAREN bal RPAREN
+
+  22  item : WORD
+  23       | CHAR
+  24       | SPACE
+  25       | COMMA
+  26       | ATSIGN
+  27       | node
+
+  28  blank :
+  29        | SPACE
+
+  30  %entry% : '\001' text
+
+state 0
+	$accept : . %entry% $end  (0)
+
+	'\001'  shift 1
+	.  error
+
+	%entry%  goto 2
+
+
+state 1
+	%entry% : '\001' . text  (30)
+	prog : .  (2)
+
+	.  reduce 2
+
+	text  goto 3
+	prog  goto 4
+
+
+state 2
+	$accept : %entry% . $end  (0)
+
+	$end  accept
+
+
+state 3
+	%entry% : '\001' text .  (30)
+
+	.  reduce 30
+
+
+state 4
+	text : prog . EOF  (1)
+	prog : prog . WORD  (3)
+	prog : prog . SPACE  (4)
+	prog : prog . CLOSE  (5)
+	prog : prog . LPAREN  (6)
+	prog : prog . RPAREN  (7)
+	prog : prog . COMMA  (8)
+	prog : prog . ATSIGN  (9)
+	prog : prog . CHAR  (10)
+	prog : prog . node  (11)
+
+	WORD  shift 5
+	OPEN  shift 6
+	CHAR  shift 7
+	LPAREN  shift 8
+	RPAREN  shift 9
+	CLOSE  shift 10
+	EOF  shift 11
+	COMMA  shift 12
+	SPACE  shift 13
+	ATSIGN  shift 14
+	.  error
+
+	node  goto 15
+
+
+state 5
+	prog : prog WORD .  (3)
+
+	.  reduce 3
+
+
+state 6
+	node : OPEN . bal1 args CLOSE  (12)
+	bal : .  (19)
+
+	.  reduce 19
+
+	bal1  goto 16
+	bal  goto 17
+
+
+state 7
+	prog : prog CHAR .  (10)
+
+	.  reduce 10
+
+
+state 8
+	prog : prog LPAREN .  (6)
+
+	.  reduce 6
+
+
+state 9
+	prog : prog RPAREN .  (7)
+
+	.  reduce 7
+
+
+state 10
+	prog : prog CLOSE .  (5)
+
+	.  reduce 5
+
+
+state 11
+	text : prog EOF .  (1)
+
+	.  reduce 1
+
+
+state 12
+	prog : prog COMMA .  (8)
+
+	.  reduce 8
+
+
+state 13
+	prog : prog SPACE .  (4)
+
+	.  reduce 4
+
+
+state 14
+	prog : prog ATSIGN .  (9)
+
+	.  reduce 9
+
+
+state 15
+	prog : prog node .  (11)
+
+	.  reduce 11
+
+
+state 16
+	node : OPEN bal1 . args CLOSE  (12)
+	args : .  (14)
+
+	COMMA  shift 18
+	CLOSE  reduce 14
+
+	args  goto 19
+
+
+state 17
+	bal1 : bal .  (13)
+	bal : bal . item  (20)
+	bal : bal . LPAREN bal RPAREN  (21)
+
+	WORD  shift 20
+	OPEN  shift 6
+	CHAR  shift 21
+	LPAREN  shift 22
+	SPACE  shift 24
+	ATSIGN  shift 25
+	CLOSE  reduce 13
+	COMMA  reduce 13
+
+	node  goto 26
+	item  goto 27
+
+
+state 18
+	args : COMMA . blank arglist  (15)
+	args : COMMA . blank ATSIGN bal  (16)
+	blank : .  (28)
+
+	SPACE  shift 28
+	WORD  reduce 28
+	OPEN  reduce 28
+	CHAR  reduce 28
+	LPAREN  reduce 28
+	CLOSE  reduce 28
+	COMMA  reduce 28
+	ATSIGN  reduce 28
+
+	blank  goto 29
+
+
+state 19
+	node : OPEN bal1 args . CLOSE  (12)
+
+	CLOSE  shift 30
+	.  error
+
+
+state 20
+	item : WORD .  (22)
+
+	.  reduce 22
+
+
+state 21
+	item : CHAR .  (23)
+
+	.  reduce 23
+
+
+state 22
+	bal : bal LPAREN . bal RPAREN  (21)
+	bal : .  (19)
+
+	.  reduce 19
+
+	bal  goto 31
+
+
+state 23
+	item : COMMA .  (25)
+
+	.  reduce 25
+
+
+state 24
+	item : SPACE .  (24)
+
+	.  reduce 24
+
+
+state 25
+	item : ATSIGN .  (26)
+
+	.  reduce 26
+
+
+state 26
+	item : node .  (27)
+
+	.  reduce 27
+
+
+state 27
+	bal : bal item .  (20)
+
+	.  reduce 20
+
+
+state 28
+	blank : SPACE .  (29)
+
+	.  reduce 29
+
+
+state 29
+	args : COMMA blank . arglist  (15)
+	args : COMMA blank . ATSIGN bal  (16)
+	bal : .  (19)
+
+	ATSIGN  shift 32
+	WORD  reduce 19
+	OPEN  reduce 19
+	CHAR  reduce 19
+	LPAREN  reduce 19
+	CLOSE  reduce 19
+	COMMA  reduce 19
+	SPACE  reduce 19
+
+	bal  goto 33
+	arglist  goto 34
+
+
+state 30
+	node : OPEN bal1 args CLOSE .  (12)
+
+	.  reduce 12
+
+
+state 31
+	bal : bal . item  (20)
+	bal : bal . LPAREN bal RPAREN  (21)
+	bal : bal LPAREN bal . RPAREN  (21)
+
+	WORD  shift 20
+	OPEN  shift 6
+	CHAR  shift 21
+	LPAREN  shift 22
+	RPAREN  shift 35
+	COMMA  shift 23
+	SPACE  shift 24
+	ATSIGN  shift 25
+	.  error
+
+	node  goto 26
+	item  goto 27
+
+
+state 32
+	args : COMMA blank ATSIGN . bal  (16)
+	bal : .  (19)
+
+	.  reduce 19
+
+	bal  goto 36
+
+
+state 33
+	arglist : bal .  (17)
+	bal : bal . item  (20)
+	bal : bal . LPAREN bal RPAREN  (21)
+
+	WORD  shift 20
+	OPEN  shift 6
+	CHAR  shift 21
+	LPAREN  shift 22
+	SPACE  shift 24
+	ATSIGN  shift 25
+	CLOSE  reduce 17
+	COMMA  reduce 17
+
+	node  goto 26
+	item  goto 27
+
+
+state 34
+	args : COMMA blank arglist .  (15)
+	arglist : arglist . COMMA bal  (18)
+
+	COMMA  shift 37
+	CLOSE  reduce 15
+
+
+state 35
+	bal : bal LPAREN bal RPAREN .  (21)
+
+	.  reduce 21
+
+
+state 36
+	args : COMMA blank ATSIGN bal .  (16)
+	bal : bal . item  (20)
+	bal : bal . LPAREN bal RPAREN  (21)
+
+	WORD  shift 20
+	OPEN  shift 6
+	CHAR  shift 21
+	LPAREN  shift 22
+	COMMA  shift 23
+	SPACE  shift 24
+	ATSIGN  shift 25
+	CLOSE  reduce 16
+
+	node  goto 26
+	item  goto 27
+
+
+state 37
+	arglist : arglist COMMA . bal  (18)
+	bal : .  (19)
+
+	.  reduce 19
+
+	bal  goto 38
+
+
+state 38
+	arglist : arglist COMMA bal .  (18)
+	bal : bal . item  (20)
+	bal : bal . LPAREN bal RPAREN  (21)
+
+	WORD  shift 20
+	OPEN  shift 6
+	CHAR  shift 21
+	LPAREN  shift 22
+	SPACE  shift 24
+	ATSIGN  shift 25
+	CLOSE  reduce 18
+	COMMA  reduce 18
+
+	node  goto 26
+	item  goto 27
+
+
+15 terminals, 11 nonterminals
+31 grammar rules, 39 states
