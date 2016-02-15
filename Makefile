@@ -5,7 +5,7 @@ all: ppc
 
 PPC = print.cmo source.cmo util.cmo mach.cmo keiko.cmo \
 	dict.cmo tree.cmo lexer.cmo parser.cmo check.cmo target.cmo \
-	regs.cmo simp.cmo share.cmo jumpopt.cmo tran.cmo kgen.cmo gen.cmo arm.cmo \
+	regs.cmo simp.cmo share.cmo jumpopt.cmo tran.cmo kgen.cmo gen.cmo regalloc.cmo arm.cmo \
 	main.cmo
 
 ppc: $(PPC)
@@ -90,7 +90,7 @@ ML = $(MLGEN) check.ml check.mli dict.ml dict.mli arm.ml arm.mli \
 	lexer.mli mach.ml mach.mli main.ml keiko.mli \
 	print.ml print.mli source.ml source.mli kgen.mli tree.ml \
 	tree.mli util.ml tran.mli target.mli target.ml \
-	simp.mli share.mli regs.mli regs.ml jumpopt.mli gen.ml gen.mli
+	simp.mli share.mli regs.mli regs.ml jumpopt.mli gen.ml gen.mli regalloc.ml regalloc.mli \
 
 
 clean: force
@@ -140,9 +140,9 @@ mach.cmo : mach.cmi
 mach.cmx : mach.cmi
 mach.cmi :
 main.cmo : tree.cmi tran.cmi source.cmi print.cmi parser.cmi mach.cmi \
-    lexer.cmi kgen.cmi check.cmi gen.cmi
+    lexer.cmi kgen.cmi check.cmi gen.cmi regalloc.cmi
 main.cmx : tree.cmx tran.cmx source.cmx print.cmx parser.cmx mach.cmx \
-    lexer.cmx kgen.cmx check.cmx gen.cmx
+    lexer.cmx kgen.cmx check.cmx gen.cmx regalloc.cmx
 keiko.cmi : print.cmi
 print.cmo : print.cmi
 print.cmx : print.cmi
@@ -169,6 +169,10 @@ jumpopt.cmi : keiko.cmi
 gen.cmo : keiko.cmi gen.cmi
 gen.cmx : keiko.cmi gen.cmi
 gen.cmi : keiko.cmi
-arm.cmo : arm.cmi gen.cmi keiko.cmi
-arm.cmx : arm.cmi gen.cmi keiko.cmi
-arm.cmi : gen.cmi keiko.cmi
+arm.cmo : arm.cmi gen.cmi keiko.cmi regalloc.cmi
+arm.cmx : arm.cmi gen.cmx keiko.cmx regalloc.cmx
+arm.cmi : gen.cmi keiko.cmi regalloc.cmi
+regalloc.cmo : regalloc.cmi
+regalloc.cmx : regalloc.cmi
+regalloc.cmi :
+

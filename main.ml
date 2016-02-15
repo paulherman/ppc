@@ -57,8 +57,8 @@ let main () =
       exit 1
   end;
   
-  let asms = List.map (fun ir -> Arm.string_of_arm_instr_tree (Arm.arm_translate ir)) irs in
-  print_endline (String.concat "" asms);
+  (*let asms = List.map (fun ir -> Arm.string_of_arm_instr_tree (Arm.arm_translate ir)) irs in
+  print_endline (String.concat "" asms);*)
   
 
   (* Translate the program *)

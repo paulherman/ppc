@@ -1,5 +1,6 @@
 open Gen
 open Keiko
+open Util
 
 type arm_part =
       Lit of string
@@ -49,23 +50,15 @@ let rec eliminate_parts tree = match tree with
     | ArmDefTemp (temp_id, code) -> ArmDefTemp (temp_id, eliminate_parts code)
     | ArmUseTemp temp_id -> tree
 
-let rec flatten_arm_instr_tree tree = match tree with
-      ArmInstrNode (parts, children) -> List.concat (List.map flatten_arm_instr_tree children) @ [parts]
-    | ArmDefTemp (temp_id, temp_tree) -> flatten_arm_instr_tree temp_tree
-    | _ -> []
-
 let string_of_arm_part part = match part with
       Lit lit -> lit
     | In -> "$IN"
     | Out -> "$OUT"
     | Reg reg_num -> String.concat "" ["r"; string_of_int reg_num]
+    
+let rec dag_of_arm_instr_tree tree = match tree with
+    | ArmInstrNode (parts, children) -> DagNode (parts, List.map dag_of_arm_instr_tree children)
+    | ArmDefTemp (label, tree) -> DagRoot (label, dag_of_arm_instr_tree tree)
+    | ArmUseTemp label -> DagEdge label
 
-let rec string_of_arm_instr instr = String.concat "" (List.map string_of_arm_part instr)
-
-let rec string_of_arm_instrs instrs = match instrs with
-      [] -> ""
-    | i :: is -> String.concat "\n" [string_of_arm_instr i; string_of_arm_instrs is]
-
-let arm_translate ir = eliminate_parts (translate "stmt" arm_rules ir)
-
-let string_of_arm_instr_tree tree = string_of_arm_instrs (flatten_arm_instr_tree tree)
+let arm_translate ir = Regalloc.vreg_alloc (dag_of_arm_instr_tree (eliminate_parts (translate "stmt" arm_rules ir)))

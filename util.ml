@@ -26,3 +26,12 @@ let make_hash n ps =
   table
 
 type 'a list_tree = Node of 'a * 'a list_tree list
+
+type ('l, 'a, 'b) dag =
+    | DagNode of 'a * ('l, 'a, 'b) dag list
+    | DagEdge of 'b
+    | DagRoot of 'l * ('l, 'a, 'b) dag
+    
+let rec flatten_list_tree tree = match tree with
+    | Node (value, children) -> List.concat (List.map flatten_list_tree children) @ [value]
+    
