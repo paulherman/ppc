@@ -1,4 +1,14 @@
 *.cmi
 *.cmx
 *.cmo
+parser.output
+jumpopt.ml
+keiko.ml
+kgen.ml
+lexer.ml
+parser.ml
+parser.mli
+share.ml
+simp.ml
+tran.ml
 ppc
