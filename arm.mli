@@ -1,7 +1,8 @@
 type arm_part =
-      Lit of string
+    | Lit of string
     | Out
     | In
-    | Reg of int
+    | VReg of int
+    | PReg of string
 
-val arm_translate : Keiko.optree -> arm_part list Regalloc.vreg_dag
+val arm_translate : Keiko.optree -> (arm_part list * int * int list) list

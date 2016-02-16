@@ -114,10 +114,10 @@ lexer.cmx : util.cmx source.cmx print.cmx parser.cmx keiko.cmx dict.cmx \
 keiko.cmo : source.cmi print.cmi keiko.cmi
 keiko.cmx : source.cmx print.cmx keiko.cmi
 kgen.cmo : tree.cmi tran.cmi target.cmi source.cmi simp.cmi share.cmi \
-    regs.cmi print.cmi mach.cmi lexer.cmi keiko.cmi jumpopt.cmi dict.cmi \
+    regs.cmi print.cmi mach.cmi lexer.cmi keiko.cmi jumpopt.cmi dict.cmi arm.cmi \
     kgen.cmi
 kgen.cmx : tree.cmx tran.cmx target.cmx source.cmx simp.cmx share.cmx \
-    regs.cmx print.cmx mach.cmx lexer.cmx keiko.cmx jumpopt.cmx dict.cmx \
+    regs.cmx print.cmx mach.cmx lexer.cmx keiko.cmx jumpopt.cmx dict.cmx arm.cmx \
     kgen.cmi
 tran.cmo : target.cmi source.cmi regs.cmi print.cmi keiko.cmi tran.cmi
 tran.cmx : target.cmx source.cmx regs.cmx print.cmx keiko.cmx tran.cmi

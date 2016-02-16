@@ -8,6 +8,7 @@ open Keiko
 open Lexer
 open Print
 open Util
+open Arm
 
 let boundchk = ref false
 let optlevel = ref 0

@@ -1,18 +1,31 @@
 open Gen
 open Keiko
 open Util
+open Regalloc
 
 type arm_part =
       Lit of string
     | Out
     | In
-    | Reg of int
+    | VReg of int
+    | PReg of string
     
 type arm_instr_tree =
       ArmInstrNode of arm_part list * arm_instr_tree list
     | ArmInstrPart of arm_part list * arm_instr_tree list
     | ArmDefTemp of int * arm_instr_tree
     | ArmUseTemp of int
+
+(* ARM register assignments:
+   R0-3   arguments + scratch
+   R4     static link or scratch
+   R5-10  callee-save temps
+   R11=fp frame pointer
+   R12=sp stack pointer
+   R13=ip temp for linkage
+   R14=lr link register
+   R15=pc program counter *)
+let regs = ["r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "fp", "sp", "ip", "lr", "pc"]
 
 let arm_rules = [
     Rule ("addr", Term (LOCAL 0), 0, fun args -> match args with [Right (LOCAL x)]-> ArmInstrPart ([Lit ("[fp, #" ^ string_of_int x ^ "]")], []));
@@ -54,11 +67,34 @@ let string_of_arm_part part = match part with
       Lit lit -> lit
     | In -> "$IN"
     | Out -> "$OUT"
-    | Reg reg_num -> String.concat "" ["r"; string_of_int reg_num]
+    | VReg reg_num -> "v" ^ string_of_int reg_num
+    | PReg reg -> reg
     
 let rec dag_of_arm_instr_tree tree = match tree with
     | ArmInstrNode (parts, children) -> DagNode (parts, List.map dag_of_arm_instr_tree children)
     | ArmDefTemp (label, tree) -> DagRoot (label, dag_of_arm_instr_tree tree)
     | ArmUseTemp label -> DagEdge label
+    
+let get_vreg_id node = match node with
+    | DagEdge reg -> reg
+    | DagNode ((ps, reg), cs) -> reg
+    
+let get_vreg node = VReg (get_vreg_id node)
+    
+let rec vreg_tree_of_vreg_dag dag = match dag with
+    | DagEdge reg -> DagEdge reg
+    | DagNode (([], reg), []) -> DagNode (([], reg), [])
+    | DagNode ((In :: ps, reg), c :: cs) -> combine (get_vreg c) (Some (vreg_tree_of_vreg_dag c)) (vreg_tree_of_vreg_dag (DagNode ((ps, reg), cs)))
+    | DagNode ((Out :: ps, reg), cs) -> combine (VReg reg) None (vreg_tree_of_vreg_dag (DagNode ((ps, reg), cs)))
+    | DagNode ((Lit l :: ps, reg), cs) -> combine (Lit l) None (vreg_tree_of_vreg_dag (DagNode ((ps, reg), cs)))
+    | DagNode (([], reg), [child]) -> (match vreg_tree_of_vreg_dag child with DagNode ((ps, reg_child), cs) -> DagNode ((ps, reg), cs))
+and combine part child node = match node with DagNode ((part :: ps, reg), cs) -> (match child with
+    | None -> DagNode ((part :: ps, reg), cs)
+    | Some (DagEdge _) -> DagNode ((part :: ps, reg), cs)
+    | Some c -> DagNode ((part :: ps, reg), c :: cs))
+    
+let rec vreg_list_of_vreg_tree tree = match tree with
+    | DagNode ((parts, reg), children) -> List.concat (List.map vreg_list_of_vreg_tree children) @ [(parts, reg, List.map get_vreg_id children)]
+    | _ -> []
 
-let arm_translate ir = Regalloc.vreg_alloc (dag_of_arm_instr_tree (eliminate_parts (translate "stmt" arm_rules ir)))
+let arm_translate ir = vreg_list_of_vreg_tree (vreg_tree_of_vreg_dag (vreg_alloc (dag_of_arm_instr_tree (eliminate_parts (translate "stmt" arm_rules ir)))))
