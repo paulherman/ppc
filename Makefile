@@ -13,11 +13,18 @@ tools/nodexp: tools/%:
 
 %.ml: %.mlp tools/nodexp
 	tools/nodexp $< >$@
+	
+build_test:
+	ocamlbuild -use-ocamlfind -package oUnit unittest.native
+	
+test: build_test
+	mv unittest.native unittest
+	./unittest
 
 force:
 
 clean: force
 	rm -f *.cmi *.cmo *.o *.output
-	rm -f ppc
+	rm -f ppc unittest
 	rm -f $(MLGEN)
 	rm -rf _build
