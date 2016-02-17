@@ -7,8 +7,7 @@ open Dict
 open Parser
 open Lexing
 open Source
-
-let lineno = ref 1                      (* Current line in input file *)
+open Util
 
 let symtable = 
   Util.make_hash 100

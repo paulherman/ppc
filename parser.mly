@@ -4,6 +4,7 @@
 open Keiko
 open Dict
 open Tree
+open Util
 %}
 
 %token <Dict.ident>     IDENT
@@ -112,7 +113,7 @@ stmt :
     IMPOSSIBLE                          { failwith "impossible" } ;
 
 line :
-    /* empty */                         { !Lexer.lineno } ;
+    /* empty */                         { !Util.lineno } ;
 
 stmt1 :
     /* empty */                         { Skip }
@@ -200,4 +201,4 @@ opt_semi :
   | /* empty */                         { () } ;
 
 name :  
-    IDENT                               { makeName ($1, !Lexer.lineno) } ;
+    IDENT                               { makeName ($1, !Util.lineno) } ;

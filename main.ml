@@ -41,7 +41,7 @@ let main () =
     try Parser.program Lexer.token lexbuf with
       Parsing.Parse_error ->
         let tok = Lexing.lexeme lexbuf in
-        Source.err_message "syntax error at token '$'" [fStr tok] !Lexer.lineno;
+        Source.err_message "syntax error at token '$'" [fStr tok] !Util.lineno;
         exit 1 in
 
   if !debug > 2 then begin

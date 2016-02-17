@@ -14,9 +14,6 @@ for passing to |printf| to print the message.
 (* |token| -- scan a token and return its code *)
 val token : Lexing.lexbuf -> Parser.token
 
-(* |lineno| -- source line number *)
-val lineno : int ref
-
 (* |intern| -- find an identifier *)
 val intern : string -> ident
 

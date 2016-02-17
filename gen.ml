@@ -1,6 +1,5 @@
 open Keiko
 open Util
-
     
 type pattern =
     | NonTerm of string
