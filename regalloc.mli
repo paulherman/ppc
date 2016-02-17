@@ -14,6 +14,6 @@ type ('a, 'b) allocator =
 
 val vreg_alloc : 'a asm_dag list -> 'a vreg_dag list
 
-val reg_alloc : 'b list -> 'a linear_instrs -> ('a -> 'b list) -> ('a, 'b) allocator list
+val reg_alloc : 'b list -> ('a -> 'b list) -> 'a linear_instrs -> ('a, 'b) allocator list
 
 val get_vreg : 'a vreg_dag -> int

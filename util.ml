@@ -40,3 +40,7 @@ let rec list_diff l0 l1 = match l0 with
     | x :: xs ->
         let xs' = list_diff xs l1 in
         if List.exists (fun p -> p = x) l1 then xs' else x :: xs'
+        
+let starts_with str pat = 
+    if String.length str < String.length pat then false
+    else String.sub str 0 (String.length pat) = pat

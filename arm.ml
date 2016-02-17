@@ -46,8 +46,6 @@ let regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"; "
 
 let free_regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"]
 
-let free_regs_one = ["r0"; "r1"; "r2"]
-
 let arm_rules = [
     Rule ("addr", Term (LOCAL 0), 0, fun args -> match args with [Right (LOCAL x)]-> ArmInstrPart ([Lit ("[fp, #" ^ string_of_int x ^ "]")], []));
     Rule ("reg", Term (CONST 0), 1, fun args -> match args with [Right (CONST x)]-> ArmInstrNode ([Lit "mov "; Out; Lit (", #" ^ string_of_int x)], []));
@@ -80,14 +78,18 @@ let rec eliminate_parts tree = match tree with
             | _ -> let ArmInstrNode (ps', cs') = eliminate_parts (ArmInstrNode (ps, cs_tl))
                    in ArmInstrNode (In :: ps', (eliminate_parts cs_hd) :: cs'))
         | Out -> let ArmInstrNode (ps', cs') = eliminate_parts (ArmInstrNode (ps, cs))
-                 in ArmInstrNode (Out :: ps', cs'))
+                 in ArmInstrNode (Out :: ps', cs')
+        | _-> failwith "Unable to form complete instruction."
+    )
     | ArmDefTemp (temp_id, code) -> ArmDefTemp (temp_id, eliminate_parts code)
     | ArmUseTemp temp_id -> tree
+    | _ -> failwith "Unable to form complete instruction."
     
 let rec dag_of_arm_instr_tree tree = match tree with
     | ArmInstrNode (parts, children) -> DagNode (parts, List.map dag_of_arm_instr_tree children)
     | ArmDefTemp (label, tree) -> DagRoot (label, dag_of_arm_instr_tree tree)
     | ArmUseTemp label -> DagEdge label
+    | ArmInstrPart _ -> failwith "Unable to transform incomplete instruction to DAG node."
     
 let rec get_vreg_id node = match node with
     | DagEdge reg -> reg
@@ -105,7 +107,9 @@ let rec vreg_tree_of_vreg_dag dag = match dag with
     | DagNode (([], reg), [child]) -> (
         match vreg_tree_of_vreg_dag child with 
             | DagNode ((ps, reg_child), cs) -> DagNode ((ps, reg), cs)
+            | _ -> failwith "Failed to reduce virtual register DAG to tree."
     )
+    | _ -> failwith "Failed to reduce virtual register DAG to tree."
 and combine part child node = match node with 
     | DagNode ((parts, reg), cs) -> 
         (match child with
@@ -120,7 +124,9 @@ let rec vreg_list_of_vreg_tree tree = match tree with
     | DagRoot (label, child) -> vreg_list_of_vreg_tree child
     
 let regs_of_instr instr = match instr with
-    | Lit l :: _ -> free_regs_one
+    | Lit l :: _ ->
+        if starts_with l "call" then ["r0"]
+        else free_regs
     | _ -> failwith "Unable to recognize instruction."
 
 let arm_translate irs =
@@ -128,6 +134,6 @@ let arm_translate irs =
     let vreg_dags = vreg_alloc arm_dags in
     let vreg_trees = List.map vreg_tree_of_vreg_dag vreg_dags in
     let vreg_lists = List.map vreg_list_of_vreg_tree vreg_trees in
-    let reg_alloc_ops = reg_alloc free_regs_one (List.concat vreg_lists) regs_of_instr in
+    let reg_alloc_ops = reg_alloc free_regs regs_of_instr (List.concat vreg_lists) in
     List.iter print_allocator reg_alloc_ops;
     List.concat vreg_lists
