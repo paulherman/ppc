@@ -8,10 +8,11 @@ type ('a, 'b) reg_dag = (int, 'a * 'b, 'b) Util.dag
 
 type 'a linear_instrs = ('a * int * int list) list
 
-type 'a allocator =
-    | Spill of 'a * int * int * int
-    | Fill of 'a * int * int * int
-    | Assign of int * 'a * int
+type ('a, 'b) allocator =
+    | Spill of 'b * int
+    | Fill of 'b * int
+    | Assign of int * 'b
+    | Instr of 'a
 
 let get_vreg vreg_dag = match vreg_dag with
     | DagNode ((code, vreg), children) -> vreg
@@ -54,7 +55,6 @@ let intervals_of_instrs instrs =
     List.iteri (set_interval_of_instr starts_map ends_map) instrs;
     Hashtbl.iter (reg_interval intervals ends_map) starts_map;
     let sorted_intervals = List.sort interval_compare !intervals in
-    List.iter (fun (vreg, istart, iend) -> Printf.printf "interval v%d: %d -> %d\n" vreg istart iend) sorted_intervals;
     sorted_intervals
     
 (* Choose interval to spill based on the end point. *)
@@ -77,11 +77,10 @@ let intervals_of_vregs intervals =
     List.iter (fun (vreg, istart, iend) -> Hashtbl.add map vreg (vreg, istart, iend)) intervals;
     map
     
-let spill intervals spills operations spill_id count regs_needed =
+let spill intervals spills operations regs_needed =
     let (spilled_vreg, spilled_reg, spilled_start, spilled_end) = choose_spill_interval intervals regs_needed in
-    operations := Spill (spilled_reg, spilled_vreg, !spill_id, count) :: !operations;
-    Hashtbl.add spills spilled_vreg !spill_id;
-    spill_id := !spill_id + 1;
+    operations := Spill (spilled_reg, spilled_vreg) :: !operations;
+    Hashtbl.add spills spilled_vreg ();
     spilled_reg
     
 let rec close_intervals intervals used_regs count = match intervals with
@@ -102,12 +101,11 @@ let rec reg_alloc regs instrs regs_of_instr =
     let active_intervals = ref [] in
     let current_instrs = ref instrs in
     let used_regs = ref [] in
-    let count = ref 0 in
     let intervals = ref (intervals_of_instrs instrs) in
     let operations = ref [] in
-    let spill_id = ref 0 in
     let interval_of_vreg = intervals_of_vregs !intervals in
     let spills = Hashtbl.create 1 in
+    let count = ref 0 in
     while !current_instrs != [] do
         let (instr, out_reg, in_regs) = List.hd !current_instrs in
         let regs_needed = out_reg :: in_regs in
@@ -118,9 +116,9 @@ let rec reg_alloc regs instrs regs_of_instr =
             if istart = !count then begin
                 let possible_regs = list_diff (regs_of_instr instr) !used_regs in
                 let allocated_reg = 
-                    if possible_regs = [] then spill active_intervals spills operations spill_id !count regs_needed
+                    if possible_regs = [] then spill active_intervals spills operations regs_needed
                     else List.hd possible_regs in
-                operations := Assign (vreg, allocated_reg, !count) :: !operations;
+                operations := Assign (vreg, allocated_reg) :: !operations;
                 used_regs := allocated_reg :: !used_regs;
                 intervals := List.tl !intervals;
                 active_intervals := (vreg, allocated_reg, istart, iend) :: !active_intervals
@@ -131,9 +129,9 @@ let rec reg_alloc regs instrs regs_of_instr =
                     let spilled_id = Hashtbl.find spills vreg in
                     let possible_regs = list_diff regs !used_regs in
                     let allocated_reg = 
-                        if possible_regs = [] then spill active_intervals spills operations spill_id !count regs_needed
+                        if possible_regs = [] then spill active_intervals spills operations regs_needed
                         else List.hd possible_regs in
-                    operations := Fill (allocated_reg, vreg, spilled_id, !count) :: !operations;
+                    operations := Fill (allocated_reg, vreg) :: !operations;
                     filled_intervals := (vreg, allocated_reg) :: !filled_intervals
                 end
             ) in_regs;
@@ -142,6 +140,7 @@ let rec reg_alloc regs instrs regs_of_instr =
                 active_intervals := (vreg, reg, istart, iend) :: !active_intervals
             ) !filled_intervals
         end;
+        operations := Instr instr :: !operations;
         count := 1 + !count
     done;
     List.rev !operations

@@ -23,13 +23,15 @@ let string_of_arm_part part = match part with
     | VReg reg_num -> "v" ^ string_of_int reg_num
     | PReg reg -> reg
     
-let print_allocator a = match a with
-    | Spill (reg, vreg, sp, pos) -> Printf.printf "spill %s v%d s%d %d\n" reg vreg sp pos
-    | Fill (reg, vreg, sp, pos) -> Printf.printf "fill %s v%d s%d %d\n" reg vreg sp pos
-    | Assign (vreg, reg, pos) -> Printf.printf "assign %s v%d %d\n" reg vreg pos
-    
 let print_instr i = match i with
     | (instr, out_reg, in_regs) -> print_endline (String.concat "" (List.map string_of_arm_part instr))
+ 
+  
+let print_allocator a = match a with
+    | Spill (reg, vreg) -> Printf.printf "spill %s v%d\n" reg vreg
+    | Fill (reg, vreg) -> Printf.printf "fill %s v%d\n" reg vreg
+    | Assign (vreg, reg) -> Printf.printf "assign v%d %s\n" vreg reg
+    | Instr instr -> print_endline (String.concat "" (List.map string_of_arm_part instr))
 
 (* ARM register assignments:
    R0-3   arguments + scratch
@@ -127,6 +129,5 @@ let arm_translate irs =
     let vreg_trees = List.map vreg_tree_of_vreg_dag vreg_dags in
     let vreg_lists = List.map vreg_list_of_vreg_tree vreg_trees in
     let reg_alloc_ops = reg_alloc free_regs_one (List.concat vreg_lists) regs_of_instr in
-    List.iter print_allocator ( reg_alloc_ops);
-    List.iter print_instr (List.concat vreg_lists);
+    List.iter print_allocator reg_alloc_ops;
     List.concat vreg_lists
