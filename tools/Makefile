@@ -1,6 +1,6 @@
 # tools/Makefile
 
-all : nodexp sshconfig pibake
+all : nodexp
 
 nodexp : print.cmo nclex.cmo ncparse.cmo ncmain.cmo
 	ocamlc -o $@ $^
@@ -12,13 +12,6 @@ ncparse.mli ncparse.ml : ncparse.mly
 	ocamlyacc -v ncparse.mly
 
 DIR := $(shell pwd)
-
-pibake: pibake.in sshconfig
-	sed 's:@DIR@:$(DIR):g' $< >$@
-	chmod +x $@
-
-sshconfig: sshconfig.in
-	sed 's:@DIR@:$(DIR):g' $< >$@
 
 %.cmi: %.mli
 	ocamlc -c $<
@@ -32,7 +25,6 @@ ML = $(MLGEN) ncmain.ml print.mli print.ml
 
 clean : force
 	rm -f nodexp *.cmo *.cmi *.output $(MLGEN)
-	rm -f sshconfig pibake
 
 depend: $(ML) force
 	(sed '/^###/q' Makefile; echo; ocamldep $(ML)) >new
