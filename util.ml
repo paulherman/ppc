@@ -35,3 +35,8 @@ type ('l, 'a, 'b) dag =
 let rec flatten_list_tree tree = match tree with
     | Node (value, children) -> List.concat (List.map flatten_list_tree children) @ [value]
     
+let rec list_diff l0 l1 = match l0 with
+    | [] -> []
+    | x :: xs ->
+        let xs' = list_diff xs l1 in
+        if List.exists (fun p -> p = x) l1 then xs' else x :: xs'

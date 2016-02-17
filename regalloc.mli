@@ -6,10 +6,13 @@ type ('a, 'b) reg_dag = (int, 'a * 'b, 'b) Util.dag
 
 type 'a linear_instrs = ('a * int * int list) list
 
-val vreg_alloc : 'a asm_dag -> 'a vreg_dag
+type 'a allocator =
+    | Spill of 'a * int * int * int
+    | Fill of 'a * int * int * int
+    | Assign of int * 'a * int
 
-val vreg_alloc_many : 'a asm_dag list -> 'a vreg_dag list
+val vreg_alloc : 'a asm_dag list -> 'a vreg_dag list
 
-val reg_alloc : 'a linear_instrs  -> 'b list -> ('a -> 'b list) -> ('a -> 'b list) -> ('b -> 'a linear_instrs) -> (('b * int) ->  'a linear_instrs) -> (int, 'b) Hashtbl.t
+val reg_alloc : 'b list -> 'a linear_instrs -> ('a -> 'b list) -> 'b allocator list
 
 val get_vreg : 'a vreg_dag -> int

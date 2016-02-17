@@ -16,6 +16,21 @@ type arm_instr_tree =
     | ArmDefTemp of int * arm_instr_tree
     | ArmUseTemp of int
 
+let string_of_arm_part part = match part with
+    | Lit lit -> lit
+    | In -> "$IN"
+    | Out -> "$OUT"
+    | VReg reg_num -> "v" ^ string_of_int reg_num
+    | PReg reg -> reg
+    
+let print_allocator a = match a with
+    | Spill (reg, vreg, sp, pos) -> Printf.printf "spill %s v%d s%d %d\n" reg vreg sp pos
+    | Fill (reg, vreg, sp, pos) -> Printf.printf "fill %s v%d s%d %d\n" reg vreg sp pos
+    | Assign (vreg, reg, pos) -> Printf.printf "assign %s v%d %d\n" reg vreg pos
+    
+let print_instr i = match i with
+    | (instr, out_reg, in_regs) -> print_endline (String.concat "" (List.map string_of_arm_part instr))
+
 (* ARM register assignments:
    R0-3   arguments + scratch
    R4     static link or scratch
@@ -25,7 +40,11 @@ type arm_instr_tree =
    R13=ip temp for linkage
    R14=lr link register
    R15=pc program counter *)
-let regs = ["r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "r10", "fp", "sp", "ip", "lr", "pc"]
+let regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"; "fp"; "sp"; "ip"; "lr"; "pc"]
+
+let free_regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"]
+
+let free_regs_one = ["r0"; "r1"; "r2"]
 
 let arm_rules = [
     Rule ("addr", Term (LOCAL 0), 0, fun args -> match args with [Right (LOCAL x)]-> ArmInstrPart ([Lit ("[fp, #" ^ string_of_int x ^ "]")], []));
@@ -62,22 +81,16 @@ let rec eliminate_parts tree = match tree with
                  in ArmInstrNode (Out :: ps', cs'))
     | ArmDefTemp (temp_id, code) -> ArmDefTemp (temp_id, eliminate_parts code)
     | ArmUseTemp temp_id -> tree
-
-let string_of_arm_part part = match part with
-      Lit lit -> lit
-    | In -> "$IN"
-    | Out -> "$OUT"
-    | VReg reg_num -> "v" ^ string_of_int reg_num
-    | PReg reg -> reg
     
 let rec dag_of_arm_instr_tree tree = match tree with
     | ArmInstrNode (parts, children) -> DagNode (parts, List.map dag_of_arm_instr_tree children)
     | ArmDefTemp (label, tree) -> DagRoot (label, dag_of_arm_instr_tree tree)
     | ArmUseTemp label -> DagEdge label
     
-let get_vreg_id node = match node with
+let rec get_vreg_id node = match node with
     | DagEdge reg -> reg
     | DagNode ((ps, reg), cs) -> reg
+    | DagRoot (label, child) -> get_vreg_id child
     
 let get_vreg node = VReg (get_vreg_id node)
     
@@ -87,14 +100,33 @@ let rec vreg_tree_of_vreg_dag dag = match dag with
     | DagNode ((In :: ps, reg), c :: cs) -> combine (get_vreg c) (Some (vreg_tree_of_vreg_dag c)) (vreg_tree_of_vreg_dag (DagNode ((ps, reg), cs)))
     | DagNode ((Out :: ps, reg), cs) -> combine (VReg reg) None (vreg_tree_of_vreg_dag (DagNode ((ps, reg), cs)))
     | DagNode ((Lit l :: ps, reg), cs) -> combine (Lit l) None (vreg_tree_of_vreg_dag (DagNode ((ps, reg), cs)))
-    | DagNode (([], reg), [child]) -> (match vreg_tree_of_vreg_dag child with DagNode ((ps, reg_child), cs) -> DagNode ((ps, reg), cs))
-and combine part child node = match node with DagNode ((part :: ps, reg), cs) -> (match child with
-    | None -> DagNode ((part :: ps, reg), cs)
-    | Some (DagEdge _) -> DagNode ((part :: ps, reg), cs)
-    | Some c -> DagNode ((part :: ps, reg), c :: cs))
+    | DagNode (([], reg), [child]) -> (
+        match vreg_tree_of_vreg_dag child with 
+            | DagNode ((ps, reg_child), cs) -> DagNode ((ps, reg), cs)
+    )
+and combine part child node = match node with 
+    | DagNode ((parts, reg), cs) -> 
+        (match child with
+            | None -> DagNode ((part :: parts, reg), cs)
+            | Some c -> DagNode ((part :: parts, reg), c :: cs)
+        )
+    | _ -> failwith "Failed to reduce virtual register DAG to tree."
     
 let rec vreg_list_of_vreg_tree tree = match tree with
     | DagNode ((parts, reg), children) -> List.concat (List.map vreg_list_of_vreg_tree children) @ [(parts, reg, List.map get_vreg_id children)]
-    | _ -> []
+    | DagEdge _ -> []
+    | DagRoot (label, child) -> vreg_list_of_vreg_tree child
+    
+let regs_of_instr instr = match instr with
+    | Lit l :: _ -> free_regs_one
+    | _ -> failwith "Unable to recognize instruction."
 
-let arm_translate ir = vreg_list_of_vreg_tree (vreg_tree_of_vreg_dag (vreg_alloc (dag_of_arm_instr_tree (eliminate_parts (translate "stmt" arm_rules ir)))))
+let arm_translate irs =
+    let arm_dags = List.map (fun ir -> dag_of_arm_instr_tree (eliminate_parts (translate "stmt" arm_rules ir))) irs in
+    let vreg_dags = vreg_alloc arm_dags in
+    let vreg_trees = List.map vreg_tree_of_vreg_dag vreg_dags in
+    let vreg_lists = List.map vreg_list_of_vreg_tree vreg_trees in
+    let reg_alloc_ops = reg_alloc free_regs_one (List.concat vreg_lists) regs_of_instr in
+    List.iter print_allocator ( reg_alloc_ops);
+    List.iter print_instr (List.concat vreg_lists);
+    List.concat vreg_lists

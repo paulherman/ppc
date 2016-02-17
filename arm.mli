@@ -5,4 +5,4 @@ type arm_part =
     | VReg of int
     | PReg of string
 
-val arm_translate : Keiko.optree -> (arm_part list * int * int list) list
+val arm_translate : Keiko.optree list -> (arm_part list * int * int list) list
