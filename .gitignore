@@ -12,3 +12,5 @@ share.ml
 simp.ml
 tran.ml
 ppc
+unittest
+_build
