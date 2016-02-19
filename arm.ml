@@ -15,6 +15,8 @@ type arm_instr_tree =
     | ArmInstrPart of arm_part list * arm_instr_tree list
     | ArmDefTemp of int * arm_instr_tree
     | ArmUseTemp of int
+    
+type arm_instr = arm_part list
 
 let string_of_arm_part part = match part with
     | Lit lit -> lit
@@ -129,7 +131,7 @@ let regs_of_instr instr = match instr with
         else free_regs
     | _ -> failwith "Unable to recognize instruction."
 
-let arm_translate irs =
+let translate irs =
     let arm_dags = List.map (fun ir -> dag_of_arm_instr_tree (eliminate_parts (translate "stmt" arm_rules ir))) irs in
     let vreg_dags = vreg_alloc arm_dags in
     let vreg_trees = List.map vreg_tree_of_vreg_dag vreg_dags in
@@ -137,3 +139,9 @@ let arm_translate irs =
     let reg_alloc_ops = reg_alloc free_regs regs_of_instr (List.concat vreg_lists) in
     List.iter print_allocator reg_alloc_ops;
     List.concat vreg_lists
+    
+let translate_proc (label, level, nargs, nregv, fsize, ir) = translate [ir]
+    
+let translate_progr globals procs strings = []
+
+let string_of_instr instr = String.concat "" (List.map string_of_arm_part instr)

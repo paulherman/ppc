@@ -6,7 +6,7 @@ type 'a asm_dag = (int, 'a, int) Util.dag
 
 type ('a, 'b) reg_dag = (int, 'a * 'b, 'b) Util.dag
 
-type 'a linear_instrs = ('a * int * int list) list
+type 'a vreg_instr = 'a * int * int list
 
 type ('a, 'b) allocator =
     | Spill of 'b * int
@@ -19,7 +19,10 @@ let get_vreg vreg_dag = match vreg_dag with
     | DagEdge vreg -> vreg
     | DagRoot _ -> failwith "Unable to get register from DAG."
 
-(* Augment instruction DAG with virtual registers from an infinite pool. *)
+(* Augment instruction DAG with virtual registers from an infinite pool. 
+   TODO:
+    - some instructions output more than one register (i.e. div on x86)
+*)
 let rec vreg_alloc trees = 
     let mapping = Hashtbl.create 1 in
     let (_, trees') = vreg_alloc_many' 0 mapping trees in
@@ -90,10 +93,13 @@ let rec close_intervals intervals used_regs count = match intervals with
         if iend < count then (used_regs := List.filter (fun r -> r != reg) !used_regs; is')
         else (vreg, reg, istart, iend) :: is'
     
-(* TODO:
-    - spill registers that become dirty after one instruction
-    - allow in registers to be specified
-    - remove lots of duplication
+(* TODO (not actually needed for ARM):
+    - allow instruction to trash physical registers (i.e. div on x86 trashes EDX even if not used)
+    - allow in, out registers to be specified at each instructions instead of when declared (i.e. map from vreg to list of pregs)
+      maybe not needed as a register is used twice only in the case of DEFTMP combined with USETEMP, but then we can generate optional moves
+    - allow to specify two vregs to be allocated to the same preg
+      example: add dest, src <=> dest = dest + src <=> out = in0
+      possible solution: append optional move instruction
 *)
 let rec reg_alloc regs regs_of_instr instrs = 
     let active_intervals = ref [] in
@@ -137,4 +143,11 @@ let rec reg_alloc regs regs_of_instr instrs =
         List.rev !operations
     in
     List.concat (List.mapi alloc_instr instrs)
-
+    
+let reg_alloc_better regs constraints thrashed_regs instructions =
+    let intervals = ref (intervals_of_instrs instructions) in
+    let used_regs = ref [] in
+    let spills = Hashtbl.create 1 in
+    let active_intervals = ref [] in
+    let alloc_instr count (instr, out_reg, in_regs) = [] in
+    List.concat (List.mapi alloc_instr instructions)

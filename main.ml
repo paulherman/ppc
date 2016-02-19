@@ -57,7 +57,7 @@ let main () =
       exit 1
   end;
   
-  let asms = Arm.arm_translate irs in
+  let asms = Arm.translate irs in
   
 
   (* Translate the program *)
