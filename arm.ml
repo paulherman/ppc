@@ -201,6 +201,12 @@ let arm_rules = [
     );
     Rule (
         "stmt",
+        PNode (RESULTW, [NonTerm "reg"]),
+        1,
+        fun [_; Left r] -> [ArmInstrNode ([Lit "mov r0, "; In], [r])]
+    );
+    Rule (
+        "stmt",
         Term (LINE 0),
         0,
         fun [Right (LINE n)] -> [ArmInstrNode ([Lit ("@Line " ^ string_of_int n)], [])]
@@ -271,6 +277,7 @@ let regs_of_instr instr = match instr with
 let trashed_regs instr = match instr with
     | Lit l :: _ ->
         if starts_with l "call" then ["r0"; "r1"; "r2"; "r3"]
+        else if starts_with l "mov r0" then ["r0"]
         else []
     | _ -> failwith "Unable to recognize instruction."
     
