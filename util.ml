@@ -60,3 +60,7 @@ let rec list_diff l0 l1 = match l0 with
 let starts_with str pat = 
     if String.length str < String.length pat then false
     else String.sub str 0 (String.length pat) = pat
+    
+let ends_with str pat =
+    if String.length str < String.length pat then false
+    else String.sub str (String.length str - String.length pat) (String.length pat) = pat

@@ -101,7 +101,7 @@ let rec close_intervals intervals used_regs count = match intervals with
       example: add dest, src <=> dest = dest + src <=> out = in0
       possible solution: append optional move instruction
 *)
-let rec reg_alloc regs regs_of_instr instrs = 
+let rec reg_alloc regs regs_of_instr trashed_regs instrs = 
     let active_intervals = ref [] in
     let used_regs = ref [] in
     let intervals = ref (intervals_of_instrs instrs) in

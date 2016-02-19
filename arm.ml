@@ -55,29 +55,156 @@ let regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"; "
 let free_regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"]
 
 let arm_rules = [
-    Rule ("stmt", Term (LABEL 0), 0, fun [Right (LABEL l)] -> ArmInstrNode ([Lit (".L" ^ string_of_int l ^ ":")], []));
-    Rule ("stmt", PNode (LABEL 0, [NonTerm "stmt"]), 0, fun [Right (LABEL l); Left r] -> ArmInstrNode ([Lit (".L" ^ string_of_int l ^ ":")], [r]));
-    Rule ("stmt", PNode (LINE 0, [NonTerm "stmt"]), 0, fun [Right (LINE n); Left r] -> ArmInstrNode ([Lit ("@Line " ^ string_of_int n)], [r]));
-    Rule ("stmt", Term (LINE 0), 0, fun [Right (LINE n)] -> ArmInstrNode ([Lit ("@Line " ^ string_of_int n)], []));
-    Rule ("addr", Term (LOCAL 0), 0, fun args -> match args with [Right (LOCAL x)]-> ArmInstrPart ([Lit ("[fp, #" ^ string_of_int x ^ "]")], []));
-    Rule ("reg", Term (CONST 0), 1, fun args -> match args with [Right (CONST x)]-> ArmInstrNode ([Lit "mov "; Out; Lit (", #" ^ string_of_int x)], []));
-    Rule ("op", Term (CONST 0), 0, fun args -> match args with [Right (CONST x)]-> ArmInstrPart ([Lit ("#" ^ string_of_int x)], []));
-    Rule ("reg", Term (GLOBAL ""), 1, fun args -> match args with [Right (GLOBAL x)]-> ArmInstrNode ([Lit "ldr "; Out; Lit (", =_" ^ x)], []));
-    Rule ("reg", Term (LOCAL 0), 1, fun args -> match args with [Right (LOCAL x)]-> ArmInstrNode ([Lit "add "; Out; Lit (", fp, #" ^ string_of_int x)], []));
-    Rule ("reg", Term (TEMP 0), 0, fun args -> match args with [Right (TEMP x)] -> ArmUseTemp x);
-    Rule ("reg", PNode (LOADW, [NonTerm "addr"]), 1, fun args -> match args with [_; Left a]-> ArmInstrNode ([Lit "ldr "; Out; Lit ", "; In], [a]));
-    Rule ("reg", PNode (BINOP Minus, [NonTerm "reg"; NonTerm "op"]), 1, fun args -> match args with [_; Left r; Left o] -> ArmInstrNode ([Lit "sub "; Out; Lit ", "; In; Lit ", "; In], [r; o]));
-    Rule ("reg", PNode (DEFTMP 0, [NonTerm "reg"]), 0, fun args -> match args with [Right (DEFTMP x); Left r]-> ArmDefTemp (x, r));
-    Rule ("stmt", PNode (STOREW, [NonTerm "reg"; NonTerm "addr"]), 1, fun args -> match args with [_; Left r; Left a] -> ArmInstrNode ([Lit "str "; In; Lit ", "; In], [r; a]));
-    Rule ("addr", PNode (BINOP PlusA, [NonTerm "reg"; Term (CONST 0)]), 0, fun args -> match args with [_; Left r; Right (CONST x)]-> ArmInstrPart ([Lit "["; In; Lit (", #" ^ string_of_int x)], [r]));
-    Rule ("addr", PNode (BINOP PlusA, [NonTerm "reg"; NonTerm "reg"]), 0, fun args -> match args with [_; Left r0; Left r1] -> ArmInstrPart ([Lit "["; In; Lit ", "; In; Lit "]"], [r0; r1]));
-    Rule ("reg", PNode (BINOP PlusA, [NonTerm "reg"; NonTerm "op"]), 1, fun args -> match args with [_; Left r; Left o] -> ArmInstrNode ([Lit "add "; Out; Lit ", "; In; Lit ", "; In], [r; o]));
-    Rule ("reg", PNode (BINOP Lsl, [NonTerm "reg"; NonTerm "op"]), 1, fun args -> match args with [_; Left r; Left o] -> ArmInstrNode ([Lit "lsl "; Out; Lit ", "; In; Lit ", "; In], [r; o]));
-    Rule ("reg", PNode (BINOP Times, [NonTerm "reg"; NonTerm "op"]), 1, fun args -> match args with [_; Left r; Left o] -> ArmInstrNode ([Lit "mul "; Out; Lit ", "; In; Lit ", "; In], [r; o]));
-    Rule ("reg", PNode (BINOP Plus, [NonTerm "reg"; NonTerm "op"]), 1, fun args -> match args with [_; Left r; Left o] -> ArmInstrNode ([Lit "add "; Out; Lit ", "; In; Lit ", "; In], [r; o]));
-    Rule ("op", NonTerm "reg", 0, fun args -> match args with [Left r] -> ArmInstrPart ([In], [r]));
-    Rule ("addr", NonTerm "reg", 0, fun args -> match args with [Left r] -> ArmInstrPart ([Lit "["; In; Lit "]"], [r]));
-    Rule ("stmt", NonTerm "reg", 0, fun args -> match args with [Left r] -> r);
+    Rule (
+        "op",
+        NonTerm "reg",
+        0,
+        fun [Left r] -> [ArmInstrPart ([In], [r])]
+    );
+    Rule (
+        "op",
+        Term (CONST 0),
+        0,
+        fun [Right (CONST x)] -> [ArmInstrPart ([Lit ("#" ^ string_of_int x)], [])]
+    );
+    Rule (
+        "addr",
+        Term (LOCAL 0),
+        0,
+        fun [Right (LOCAL x)] -> [ArmInstrPart ([Lit ("[fp, #" ^ string_of_int x ^ "]")], [])]
+    );
+    Rule (
+        "addr",
+        PNode (BINOP PlusA, [NonTerm "reg"; Term (CONST 0)]),
+        0,
+        fun [_; Left r; Right (CONST x)] -> [ArmInstrPart ([Lit "["; In; Lit (", #" ^ string_of_int x)], [r])]
+    );
+    Rule (
+        "addr",
+        PNode (BINOP PlusA, [NonTerm "reg"; NonTerm "reg"]),
+        0,
+        fun [_; Left r0; Left r1] -> [ArmInstrPart ([Lit "["; In; Lit ", "; In; Lit "]"], [r0; r1])]
+    );
+    Rule (
+        "addr",
+        NonTerm "reg",
+        0,
+        fun [Left r] -> [ArmInstrPart ([Lit "["; In; Lit "]"], [r])]
+    );
+    Rule (
+        "reg",
+        Term (GLOBAL ""),
+        1,
+        fun [Right (GLOBAL x)] -> [ArmInstrNode ([Lit "ldr "; Out; Lit (", =_" ^ x)], [])]
+    );
+    Rule (
+        "reg",
+        Term (CONST 0),
+        1,
+        fun [Right (CONST x)] -> [ArmInstrNode ([Lit "mov "; Out; Lit (", #" ^ string_of_int x)], [])]
+    );
+    Rule (
+        "reg",
+        Term (LOCAL 0),
+        1,
+        fun [Right (LOCAL x)] -> [ArmInstrNode ([Lit "add "; Out; Lit (", fp, #" ^ string_of_int x)], [])]
+    );
+    Rule (
+        "reg",
+        Term (TEMP 0),
+        0,
+        fun [Right (TEMP x)] -> [ArmUseTemp x]
+    );
+    Rule (
+        "reg",
+        PNode (LOADW, [NonTerm "addr"]),
+        1,
+        fun [_; Left a] -> [ArmInstrNode ([Lit "ldr "; Out; Lit ", "; In], [a])]
+    );
+    Rule (
+        "reg",
+        PNode (BINOP Minus, [NonTerm "reg"; NonTerm "op"]),
+        1,
+        fun [_; Left r; Left o] -> [ArmInstrNode ([Lit "sub "; Out; Lit ", "; In; Lit ", "; In], [r; o])]
+    );
+    Rule (
+        "reg",
+        PNode (DEFTMP 0, [NonTerm "reg"]),
+        0,
+        fun [Right (DEFTMP x); Left r] -> [ArmDefTemp (x, r)]
+    );
+    Rule (
+        "reg",
+        PNode (BINOP PlusA, [NonTerm "reg"; NonTerm "op"]),
+        1,
+        fun [_; Left r; Left o] -> [ArmInstrNode ([Lit "add "; Out; Lit ", "; In; Lit ", "; In], [r; o])]
+    );
+    Rule (
+        "reg",
+        PNode (BINOP Lsl, [NonTerm "reg"; NonTerm "op"]),
+        1,
+        fun [_; Left r; Left o] -> [ArmInstrNode ([Lit "lsl "; Out; Lit ", "; In; Lit ", "; In], [r; o])]
+    );
+    Rule (
+        "reg",
+        PNode (BINOP Times, [NonTerm "reg"; NonTerm "op"]),
+        1,
+        fun [_; Left r; Left o] -> [ArmInstrNode ([Lit "mul "; Out; Lit ", "; In; Lit ", "; In], [r; o])]
+    );
+    Rule (
+        "reg",
+        PNode (BINOP Plus, [NonTerm "reg"; NonTerm "op"]),
+        1,
+        fun [_; Left r; Left o] -> [ArmInstrNode ([Lit "add "; Out; Lit ", "; In; Lit ", "; In], [r; o])]
+    );
+    Rule (
+        "stmt",
+        PNode (STOREW, [NonTerm "reg"; NonTerm "addr"]),
+        1,
+        fun [_; Left r; Left a] -> [ArmInstrNode ([Lit "str "; In; Lit ", "; In], [r; a])]
+    );
+    Rule (
+        "stmt",
+        NonTerm "reg",
+        0, 
+        fun [Left r] -> [r]
+    );
+    Rule (
+        "stmt",
+        Term (JUMP 0),
+        0,
+        fun [Right (JUMP l)] -> [ArmInstrNode ([Lit ("b .L" ^ string_of_int l)], [])]
+    );
+    Rule (
+        "stmt",
+        PNode (JUMPC (Neq, 0), [NonTerm "reg"; NonTerm "op"]),
+        0,
+        fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("bne .L" ^ string_of_int l)], [])]
+    );
+    Rule (
+        "stmt",
+        Term (LABEL 0),
+        0,
+        fun [Right (LABEL l)] -> [ArmInstrNode ([Lit (".L" ^ string_of_int l ^ ":")], [])]
+    );
+    Rule (
+        "stmt",
+        PNode (LABEL 0, [NonTerm "stmt"]),
+        0,
+        fun [Right (LABEL l); Left r] -> [ArmInstrNode ([Lit (".L" ^ string_of_int l ^ ":")], [r])]
+    );
+    Rule (
+        "stmt",
+        PNode (LINE 0, [NonTerm "stmt"]),
+        0,
+        fun [Right (LINE n); Left r] -> [ArmInstrNode ([Lit ("@Line " ^ string_of_int n)], [r])]
+    );
+    Rule (
+        "stmt",
+        Term (LINE 0),
+        0,
+        fun [Right (LINE n)] -> [ArmInstrNode ([Lit ("@Line " ^ string_of_int n)], [])]
+    );
 ]
 
 let rec eliminate_parts tree = match tree with
@@ -141,12 +268,18 @@ let regs_of_instr instr = match instr with
         else free_regs
     | _ -> failwith "Unable to recognize instruction."
 
+let trashed_regs instr = match instr with
+    | Lit l :: _ ->
+        if starts_with l "call" then ["r0"; "r1"; "r2"; "r3"]
+        else []
+    | _ -> failwith "Unable to recognize instruction."
+    
 let translate irs =
-    let arm_dags = List.map (fun ir -> dag_of_arm_instr_tree (eliminate_parts (translate "stmt" arm_rules ir))) irs in
+    let arm_dags = List.concat (List.map (fun ir -> List.map dag_of_arm_instr_tree (List.map eliminate_parts (translate "stmt" arm_rules ir))) irs) in
     let vreg_dags = vreg_alloc arm_dags in
     let vreg_trees = List.map vreg_tree_of_vreg_dag vreg_dags in
     let vreg_lists = List.map vreg_list_of_vreg_tree vreg_trees in
-    let reg_alloc_ops = reg_alloc free_regs regs_of_instr (List.concat vreg_lists) in
+    let reg_alloc_ops = reg_alloc free_regs regs_of_instr trashed_regs (List.concat vreg_lists) in
     reg_alloc_ops
     
 let rec count_spills allocs = match allocs with
@@ -175,7 +308,7 @@ let translate_proc (label, proc_level, num_args, num_reg_vars, frame_size, irs) 
     let spills = count_spills alloc_body in
     let spills_size = 4 * spills in
     let bodies = process_allocs alloc_body in
-    bodies
+    [Lit (label ^ ":")] :: bodies
     
 let translate_global (label, size) = [[Lit (".comm " ^ label ^ ", " ^ string_of_int size ^ ", 4")]]
     
@@ -185,9 +318,13 @@ let translate_string (label, text) =
     [[Lit (label ^ ": ")]; [Lit (".byte " ^ String.concat ", " (List.map string_of_int (List.rev !bytes))); Lit ", 0"]]
     
 let translate_progr globals procs strings =
-    let globals_asm = [Lit ".data"] :: List.concat (List.map translate_global globals) in
+    let globals_asm = if globals = [] then [] else [Lit ".data"] :: List.concat (List.map translate_global globals) in
     let procs_asm = [Lit ".text"] :: List.concat (List.map translate_proc procs) in
-    let strings_asm = [Lit ".data"] :: List.concat (List.map translate_string strings) in
+    let strings_asm = if strings = [] then [] else [Lit ".data"] :: List.concat (List.map translate_string strings) in
     procs_asm @ globals_asm @ strings_asm
 
-let string_of_instr instr = String.concat "" (List.map string_of_arm_part instr)
+let string_of_instr instr =
+    let instr_str = String.concat "" (List.map string_of_arm_part instr) in
+    if not (starts_with instr_str ".") && not (ends_with instr_str ":") then "    " ^ instr_str
+    else if ends_with instr_str ":" && starts_with instr_str "." then "  " ^ instr_str
+    else instr_str

@@ -1,6 +1,8 @@
 *.cmi
 *.cmx
 *.cmo
+*.pas
+*.p
 parser.output
 jumpopt.ml
 keiko.ml
