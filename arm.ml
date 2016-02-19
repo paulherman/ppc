@@ -89,7 +89,7 @@ let arm_rules = [
         "addr",
         PNode (BINOP PlusA, [NonTerm "reg"; Term (CONST 0)]),
         0,
-        fun [_; Left r; Right (CONST x)] -> [ArmInstrPart ([Lit "["; In; Lit (", #" ^ string_of_int x)], [r])]
+        fun [_; Left r; Right (CONST x)] -> [ArmInstrPart ([Lit "["; In; Lit (", #" ^ string_of_int x); Lit "]"], [r])]
     );
     Rule (
         "addr",
@@ -219,6 +219,18 @@ let arm_rules = [
     );
     Rule (
         "stmt",
+        PNode (JUMPC (Eq, 0), [NonTerm "reg"; NonTerm "op"]),
+        0,
+        fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("beq .L" ^ string_of_int l)], [])]
+    );
+    Rule (
+        "stmt",
+        PNode (JUMPC (Lt, 0), [NonTerm "reg"; NonTerm "op"]),
+        0,
+        fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("blt .L" ^ string_of_int l)], [])]
+    );
+    Rule (
+        "stmt",
         PNode (JUMPC (Gt, 0), [NonTerm "reg"; NonTerm "op"]),
         0,
         fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("bgt .L" ^ string_of_int l)], [])]
@@ -240,6 +252,12 @@ let arm_rules = [
         PNode (SLINK, [GTerm (CONST 0, (fun (CONST k) -> k = 0))]),
         0,
         fun [_; _] -> []
+    );
+    Rule (
+        "stmt",
+        PNode (SLINK, [NonTerm "reg"]),
+        1,
+        fun [_; Left r] -> [ArmInstrNode ([Lit "mov r4, "; In], [r])]
     );
     Rule (
         "stmt",
@@ -326,6 +344,10 @@ let trashed_regs instr = match instr with
     | Lit l :: _ ->
         if starts_with l "call" then ["r0"; "r1"; "r2"; "r3"]
         else if starts_with l "mov r0" then ["r0"]
+        else if starts_with l "mov r1" then ["r1"]
+        else if starts_with l "mov r2" then ["r2"]
+        else if starts_with l "mov r3" then ["r3"]
+        else if starts_with l "mov r4" then ["r4"]
         else []
     | _ -> failwith "Unable to recognize instruction."
     
