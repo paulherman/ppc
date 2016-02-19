@@ -4,7 +4,7 @@
 
 #### Example programs
 
-```
+```pascal
 var f, n, i : integer;
 
 begin
@@ -17,3 +17,4 @@ begin
     end
 end.
 ```
+
