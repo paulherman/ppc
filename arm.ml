@@ -18,6 +18,12 @@ type arm_instr_tree =
     
 type arm_instr = arm_part list
 
+type global = symbol * int
+
+type proc = symbol * int * int * int * int * optree list
+
+type str_literal = symbol * string
+
 let string_of_arm_part part = match part with
     | Lit lit -> lit
     | In -> "$IN"
@@ -154,14 +160,17 @@ let translate_proc (label, proc_level, num_args, num_reg_vars, frame_size, irs) 
     let body = [] in
     body
     
-let translate_global (label, size) = []
+let translate_global (label, size) = [[Lit (".comm " ^ label ^ ", " ^ string_of_int size ^ ", 4")]]
     
-let translate_string (label, text) = []
+let translate_string (label, text) =
+    let bytes = ref [] in
+    String.iter (fun c -> bytes := (int_of_char c) :: !bytes) text;
+    [[Lit (label ^ ": ")]; [Lit (".byte " ^ String.concat ", " (List.map string_of_int (List.rev !bytes))); Lit ", 0"]]
     
 let translate_progr globals procs strings =
-    let globals_asm = List.map translate_global globals in
-    let procs_asm = List.map translate_proc procs in
-    let strings_asm = List.map translate_string strings in
-    List.concat (procs_asm @ globals_asm @ strings_asm)
+    let globals_asm = [Lit ".data"] :: List.concat (List.map translate_global globals) in
+    let procs_asm = [Lit ".text"] :: List.concat (List.map translate_proc procs) in
+    let strings_asm = [Lit ".data"] :: List.concat (List.map translate_string strings) in
+    procs_asm @ globals_asm @ strings_asm
 
 let string_of_instr instr = String.concat "" (List.map string_of_arm_part instr)
