@@ -1,7 +1,7 @@
 # Pico Pascal Compiler
 - based on the Keiko virtual machine for IR
 - implements an ARM backend
-- based on the PPC written by [Mike Spivey](http://spivey.oriel.ox.ac.uk/corner/Compilers "Compilers Course on Spivey's Corner") for the compilers course at University of Oxford
+- based on the PPC written by [Mike Spivey](http://spivey.oriel.ox.ac.uk/corner/Welcome_to_Spivey%27s_Corner) for the [compilers course at University of Oxford](http://spivey.oriel.ox.ac.uk/corner/Compilers "Compilers Course on Spivey's Corner")
 
 #### How to build?
 - you need ocamlbuild with ocamllex and ocamllyacc
