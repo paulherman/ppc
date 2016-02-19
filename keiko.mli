@@ -78,5 +78,7 @@ val canon : optree -> optree list
 (* |flatten| -- move args before calls *)
 val flatten : optree list -> optree list
 
+val string_of_inst : inst -> string
+
 (* |print_optree| -- output operator tree on stdout with line breaking *)
 val print_optree : string -> optree -> unit

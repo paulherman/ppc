@@ -19,57 +19,6 @@ type 'a cost_map = (string, int * 'a rule) Hashtbl.t
 
 type 'a dp = DP of inst * ('a dp) list * 'a cost_map
 
-let string_of_op op = match op with
-    | Plus -> "+" 
-    | Minus -> "-"
-    | Times -> "*"
-    | Div -> "/"
-    | Mod -> "%"
-    | Eq -> "="
-    | Uminus -> "-"
-    | Lt -> "<"
-    | Gt -> ">"
-    | Leq -> "<="
-    | Geq -> ">="
-    | Neq -> "!="
-    | And -> "&&"
-    | Or -> "||"
-    | Not -> "!"
-    | PlusA -> "A+"
-    | Lsl-> "<<"
-    | Lsr -> ">>"
-    | Asr -> ">>>"
-    | BitAnd -> "&"
-    | BitOr -> "|"
-    | BitNot-> "~"
-    
-let string_of_inst instr = match instr with
-    | CONST k -> "CONST " ^ (string_of_int k)
-    | GLOBAL g -> "GLOBAL " ^ g
-    | LOCAL l -> "LOCAL " ^ (string_of_int l)
-    | REGVAR r -> "REGVAR " ^ (string_of_int r)
-    | LOADC -> "LOADC"
-    | LOADW -> "LOADW"
-    | STOREC -> "STOREC"
-    | STOREW -> "STOREW"
-    | ARG a -> "ARG " ^ (string_of_int a)
-    | SLINK -> "SLINK"
-    | PCALL n -> "PCALL " ^ (string_of_int n)
-    | RESULTW -> "RESULTW"
-    | MONOP o -> "MONOP " ^ (string_of_op o)
-    | BINOP o -> "BINOP " ^ (string_of_op o)
-    | BOUND -> "BOUND"
-    | NCHECK -> "NCHECK"
-    | LABEL l -> "LABEL " ^ (string_of_int l)
-    | JUMP l -> "JUMP " ^ (string_of_int l)
-    | JUMPC (o, l) -> "JUMPC " ^ (string_of_int l) ^ " " ^ (string_of_op o)
-    | JCASE (ls, l) -> "JCASE " ^ (string_of_int l) ^ " (" ^ (String.concat ", " (List.map string_of_int ls)) ^ ")"
-    | TEMP l -> "TEMP " ^ (string_of_int l)
-    | DEFTMP l -> "DEFTMP " ^ (string_of_int l) 
-    | NOP -> "NOP"
-    | LINE line -> "LINE " ^ string_of_int line 
-    | _ -> "UNKINSTR"
-
 let same_instr left right = match left, right with
     | CONST _, CONST _ -> true
     | GLOBAL _, GLOBAL _ -> true
@@ -118,14 +67,6 @@ let rec print_dp depth dp =
             Hashtbl.iter (fun k v -> print_string (" " ^ k)) costs;
             print_endline "";
             List.iter (print_dp (depth + 1)) children
-            
-let rec print_optree depth tree =
-    let indent = String.concat "" (copy depth "  ") in
-    match tree with
-        | Node (instr, children) ->
-            print_endline (indent ^ string_of_inst instr);
-            List.iter (print_optree (depth + 1)) children
-            
 
 let sum_list = List.fold_left (+) 0
 
