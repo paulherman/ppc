@@ -99,6 +99,13 @@ let print_rule rule = match rule with Rule (nonterm, pat, cost, gen) -> print_en
 let rec print_dp dp = match dp with DP (instr, children, costs) -> (print_string ("DP " ^ string_of_inst instr); Hashtbl.iter (fun k v -> print_string (k ^ " ")) costs; print_newline (); List.iter print_dp children)
 
 let sum_list = List.fold_left (+) 0
+
+let rule_compare x y =
+    let rule_value rule = match rule with
+        | NonTerm _ -> 2
+        | Term _ -> 1
+        | PNode _ -> 0
+    in compare (rule_value x) (rule_value y)
     
 let option_is_none opt = match opt with
     | Some _ -> false
