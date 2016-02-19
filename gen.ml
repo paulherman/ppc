@@ -68,8 +68,6 @@ let rec print_dp depth dp =
             print_endline "";
             List.iter (print_dp (depth + 1)) children
 
-let sum_list = List.fold_left (+) 0
-
 let rule_compare (Rule (nt0, pat0, cost0, gen0)) (Rule (nt1, pat1, cost1, gen1)) =
     let pat_value rule = match rule with
         | NonTerm _ -> 2

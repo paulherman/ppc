@@ -47,6 +47,8 @@ let is_none opt = match opt with
 let get_option opt = match opt with
     | Some value -> value
     | None -> failwith "Unable to get value from None."
+
+let sum_list = List.fold_left (+) 0
     
 let rec flatten_list_tree tree = match tree with
     | Node (value, children) -> List.concat (List.map flatten_list_tree children) @ [value]
