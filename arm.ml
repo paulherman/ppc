@@ -55,6 +55,10 @@ let regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"; "
 let free_regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"]
 
 let arm_rules = [
+    Rule ("stmt", Term (LABEL 0), 0, fun [Right (LABEL l)] -> ArmInstrNode ([Lit (".L" ^ string_of_int l ^ ":")], []));
+    Rule ("stmt", PNode (LABEL 0, [NonTerm "stmt"]), 0, fun [Right (LABEL l); Left r] -> ArmInstrNode ([Lit (".L" ^ string_of_int l ^ ":")], [r]));
+    Rule ("stmt", PNode (LINE 0, [NonTerm "stmt"]), 0, fun [Right (LINE n); Left r] -> ArmInstrNode ([Lit ("@Line " ^ string_of_int n)], [r]));
+    Rule ("stmt", Term (LINE 0), 0, fun [Right (LINE n)] -> ArmInstrNode ([Lit ("@Line " ^ string_of_int n)], []));
     Rule ("addr", Term (LOCAL 0), 0, fun args -> match args with [Right (LOCAL x)]-> ArmInstrPart ([Lit ("[fp, #" ^ string_of_int x ^ "]")], []));
     Rule ("reg", Term (CONST 0), 1, fun args -> match args with [Right (CONST x)]-> ArmInstrNode ([Lit "mov "; Out; Lit (", #" ^ string_of_int x)], []));
     Rule ("op", Term (CONST 0), 0, fun args -> match args with [Right (CONST x)]-> ArmInstrPart ([Lit ("#" ^ string_of_int x)], []));
@@ -143,7 +147,6 @@ let translate irs =
     let vreg_trees = List.map vreg_tree_of_vreg_dag vreg_dags in
     let vreg_lists = List.map vreg_list_of_vreg_tree vreg_trees in
     let reg_alloc_ops = reg_alloc free_regs regs_of_instr (List.concat vreg_lists) in
-    List.iter print_allocator reg_alloc_ops;
     reg_alloc_ops
     
 let rec count_spills allocs = match allocs with
@@ -151,14 +154,28 @@ let rec count_spills allocs = match allocs with
     | (Spill _) :: allocs -> 1 + count_spills allocs
     | _ :: allocs -> count_spills allocs
     
+let process_allocs instrs =
+    let map = Hashtbl.create 1 in
+    let code = ref [] in
+    let reg_of_vreg part = match part with
+        | VReg vreg -> PReg (Hashtbl.find map vreg)
+        | part -> part
+    in
+    let gen instr = match instr with
+        | Assign (vreg, reg) ->
+            Hashtbl.replace map vreg reg
+        | Instr parts ->
+            code := (List.map reg_of_vreg parts) :: !code
+    in
+    List.iter gen instrs;
+    List.rev !code
+    
 let translate_proc (label, proc_level, num_args, num_reg_vars, frame_size, irs) = 
-(*
     let alloc_body = translate irs in
     let spills = count_spills alloc_body in
     let spills_size = 4 * spills in
-*)
-    let body = [] in
-    body
+    let bodies = process_allocs alloc_body in
+    bodies
     
 let translate_global (label, size) = [[Lit (".comm " ^ label ^ ", " ^ string_of_int size ^ ", 4")]]
     
