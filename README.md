@@ -7,4 +7,5 @@
 - you need ocamlbuild with ocamllex and ocamllyacc
 - you need the [ounit](http://ounit.forge.ocamlcore.org/) library for tests
 - you can see examples in the `examples` folder
-- command line options: ppc (-d <level>) (-O) (-O2) <file>
+- command line options `ppc (-d <level>) (-O) (-O2) <file>`
+- run `make test` to run the tests (currently inexistent)
