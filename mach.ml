@@ -46,7 +46,7 @@ sp:     outgoing arg 4
 let param_base = 40
 let local_base level = 0
 let stat_link = 0
-let nregvars = 3
+let nregvars = 0
 let share_globals = true
 
 let comment = "@ "
