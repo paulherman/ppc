@@ -49,7 +49,7 @@ and vreg_alloc_one regs mapping node = match node with
 let intervals_of_instrs instrs = 
     let rec set_interval_of_instr starts ends count (instr, out_reg, in_regs) =
         Hashtbl.replace starts out_reg (count + 0);
-        List.iter (fun reg -> Hashtbl.replace ends reg count) in_regs in
+        List.iter (fun reg -> Hashtbl.replace ends reg (count - 1)) in_regs in
     let reg_interval intervals ends vreg start = if Hashtbl.mem ends vreg then intervals := (vreg, start, Hashtbl.find ends vreg) :: !intervals in
     let interval_compare (reg0, start0, end0) (reg1, start1, end1) = if start0 == start1 then 0 else if start0 > start1 then 1 else -1 in
     let intervals = ref [] in
