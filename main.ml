@@ -16,12 +16,6 @@ let spec =
       "-O", Arg.Unit (fun () -> Kgen.optlevel := 1), " enable optimiser";
       "-O2", Arg.Unit (fun () -> Kgen.optlevel := 2), " more optimisation"]
       
-let ir_0 = Util.Node (Keiko.STOREW, [Util.Node (Keiko.CONST 35, []); Util.Node (Keiko.LOCAL 4, [])])
-let ir_1 = Util.Node (Keiko.DEFTMP 1, [Util.Node (Keiko.LOADW, [Util.Node (Keiko.LOCAL 0, [])])])
-let ir_2 = Util.Node (Keiko.DEFTMP 2, [Util.Node (Keiko.BINOP Keiko.Minus, [Util.Node (Keiko.TEMP 1, []); Util.Node (Keiko.LOADW, [Util.Node (Keiko.LOCAL 4, [])])])])
-let ir_3 = Util.Node (Keiko.BINOP Keiko.Plus, [Util.Node (Keiko.BINOP Keiko.Times, [Util.Node (Keiko.TEMP 2, []); Util.Node (Keiko.TEMP 2, [])]); Util.Node (Keiko.TEMP 1, [])])
-let irs = [ir_0; ir_1; ir_2; ir_3]
-
 let main () =
   let fns = ref [] in
   Arg.parse spec (function s -> fns := !fns @ [s]) usage;
@@ -57,9 +51,6 @@ let main () =
       exit 1
   end;
   
-  let asms = Arm.translate irs in
-  
-
   (* Translate the program *)
   Kgen.translate prog;
   exit 0

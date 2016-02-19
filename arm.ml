@@ -146,9 +146,11 @@ let rec count_spills allocs = match allocs with
     | _ :: allocs -> count_spills allocs
     
 let translate_proc (label, proc_level, num_args, num_reg_vars, frame_size, irs) = 
+(*
     let alloc_body = translate irs in
     let spills = count_spills alloc_body in
     let spills_size = 4 * spills in
+*)
     let body = [] in
     body
     
