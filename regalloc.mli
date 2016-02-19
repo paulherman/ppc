@@ -10,6 +10,7 @@ type ('a, 'b) allocator =
     | Spill of 'b * int
     | Fill of 'b * int
     | Assign of int * 'b
+    | Move of int * 'b
     | Instr of 'a
 
 val vreg_alloc : 'a asm_dag list -> 'a vreg_dag list

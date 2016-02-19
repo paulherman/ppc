@@ -12,6 +12,7 @@ type ('a, 'b) allocator =
     | Spill of 'b * int
     | Fill of 'b * int
     | Assign of int * 'b
+    | Move of int * 'b
     | Instr of 'a
 
 let get_vreg vreg_dag = match vreg_dag with

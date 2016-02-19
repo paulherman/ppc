@@ -56,6 +56,18 @@ let free_regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r1
 
 let arm_rules = [
     Rule (
+        "call",
+        PNode (PCALL 0, [Term (GLOBAL "")]),
+        1,
+        fun [Right (PCALL args); Right (GLOBAL f)] -> [ArmInstrNode ([Lit ("bl " ^ f)], [])]
+    );
+    Rule (
+        "call",
+        PNode (PCALL 0, [NonTerm "reg"]),
+        1,
+        fun [Right (PCALL args); Left r] -> [ArmInstrNode ([Lit "blx "; In], [r])]
+    );
+    Rule (
         "op",
         NonTerm "reg",
         0,
@@ -90,6 +102,12 @@ let arm_rules = [
         NonTerm "reg",
         0,
         fun [Left r] -> [ArmInstrPart ([Lit "["; In; Lit "]"], [r])]
+    );
+    Rule (
+        "reg",
+        NonTerm "call",
+        0,
+        fun [Left r] -> [r]
     );
     Rule (
         "reg",
@@ -165,6 +183,12 @@ let arm_rules = [
     );
     Rule (
         "stmt",
+        NonTerm "call",
+        0,
+        fun [Left r] -> [r]
+    );
+    Rule (
+        "stmt",
         NonTerm "reg",
         0, 
         fun [Left r] -> [r]
@@ -177,9 +201,27 @@ let arm_rules = [
     );
     Rule (
         "stmt",
+        GPNode (ARG 0, (fun (ARG n) -> n < 4), [NonTerm "reg"]),
+        1,
+        fun [Right (ARG n); Left r] -> [ArmInstrNode ([Lit ("mov r" ^ string_of_int n ^ ", "); In], [r])]
+    );
+    Rule (
+        "stmt",
+        GPNode (ARG 0, (fun (ARG n) -> n >= 4), [NonTerm "reg"]),
+        1,
+        fun [Right (ARG n); Left r] -> [ArmInstrNode ([Lit "str "; In; Lit (", [sp" ^ string_of_int (4 * n - 16) ^ "]")], [r])]
+    );
+    Rule (
+        "stmt",
         PNode (JUMPC (Neq, 0), [NonTerm "reg"; NonTerm "op"]),
         0,
         fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("bne .L" ^ string_of_int l)], [])]
+    );
+    Rule (
+        "stmt",
+        PNode (JUMPC (Gt, 0), [NonTerm "reg"; NonTerm "op"]),
+        0,
+        fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("bgt .L" ^ string_of_int l)], [])]
     );
     Rule (
         "stmt",
@@ -192,6 +234,12 @@ let arm_rules = [
         PNode (LABEL 0, [NonTerm "stmt"]),
         0,
         fun [Right (LABEL l); Left r] -> [ArmInstrNode ([Lit (".L" ^ string_of_int l ^ ":")], [r])]
+    );
+    Rule (
+        "stmt",
+        PNode (SLINK, [GTerm (CONST 0, (fun (CONST k) -> k = 0))]),
+        0,
+        fun [_; _] -> []
     );
     Rule (
         "stmt",
