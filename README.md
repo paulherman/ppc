@@ -2,7 +2,7 @@
 - based on the Keiko virtual machine for IR
 - implements an ARM backend
 
-=== Example programs
+#### Example programs
 
 ```
 var f, n, i : integer;
