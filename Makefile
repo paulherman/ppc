@@ -1,6 +1,6 @@
 OPT = -O2 -g
 
-MLGEN = keiko.ml kgen.ml tran.ml simp.ml share.ml jumpopt.ml
+MLGEN = keiko.ml kgen.ml simp.ml share.ml jumpopt.ml
 
 all: $(MLGEN) build
 

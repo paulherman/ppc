@@ -27,7 +27,6 @@ let main () =
   let lexbuf = Lexing.from_channel in_chan in
   Source.init in_file in_chan;
   Kgen.debug := !debug;
-  Tran.debug := !debug;
   ignore (Parsing.set_trace (!debug > 2));
 
   (* Parse the program *)
