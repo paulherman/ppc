@@ -138,10 +138,28 @@ let translate irs =
     let vreg_lists = List.map vreg_list_of_vreg_tree vreg_trees in
     let reg_alloc_ops = reg_alloc free_regs regs_of_instr (List.concat vreg_lists) in
     List.iter print_allocator reg_alloc_ops;
-    List.concat vreg_lists
+    reg_alloc_ops
     
-let translate_proc (label, level, nargs, nregv, fsize, ir) = translate [ir]
+let rec count_spills allocs = match allocs with
+    | [] -> 0
+    | (Spill _) :: allocs -> 1 + count_spills allocs
+    | _ :: allocs -> count_spills allocs
     
-let translate_progr globals procs strings = []
+let translate_proc (label, proc_level, num_args, num_reg_vars, frame_size, irs) = 
+    let alloc_body = translate irs in
+    let spills = count_spills alloc_body in
+    let spills_size = 4 * spills in
+    let body = [] in
+    body
+    
+let translate_global (label, size) = []
+    
+let translate_string (label, text) = []
+    
+let translate_progr globals procs strings =
+    let globals_asm = List.map translate_global globals in
+    let procs_asm = List.map translate_proc procs in
+    let strings_asm = List.map translate_string strings in
+    List.concat (procs_asm @ globals_asm @ strings_asm)
 
 let string_of_instr instr = String.concat "" (List.map string_of_arm_part instr)

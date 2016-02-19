@@ -344,7 +344,7 @@ let do_proc lab lev nargs fsize nregv body =
       show "After unnesting" (unnest code1) 
     else
       show "After sharing" (Share.traverse code1) in
-  Tran.translate lab lev nargs nregv fsize (flatten code2)
+  (lab, lev, nargs, nregv, fsize, flatten code2)
 
 (* |gen_proc| -- translate a procedure, ignore other declarations *)
 let rec gen_proc = 
@@ -354,34 +354,31 @@ let rec gen_proc =
         let p = get_proc d.d_type in
         begin
           match d.d_addr with 
-              Global lab ->
-                let line = Source.get_line x.x_line in
-                printf "$$\n" [fStr Mach.comment; fStr line];
-                do_proc lab d.d_level p.p_pcount !fsize !nregv body;
-                gen_procs locals
-            | _ -> failwith "gen_proc"
+            | Global lab -> Some ((do_proc lab d.d_level p.p_pcount !fsize !nregv body) :: (gen_procs locals))
+            | _ -> None
         end
-    | _ -> ()
+    | _ -> None
 
 (* |gen_procs| -- generate code for the procedures in a block *)
-and gen_procs ds = List.iter gen_proc ds
+and gen_procs ds = List.concat (List.map get_option (List.filter is_some (List.map gen_proc ds)))
 
 (* |gen_global| -- generate declaration for global variable *)
 let gen_global d =
   match d.d_kind with
       VarDef ->
         (match d.d_addr with
-            Global lab -> 
-              Target.emit_global lab (size_of d.d_type)
-          | _ -> failwith "gen_global")
-    | _ -> ()
+            Global lab -> Some (lab, size_of d.d_type)
+          | _ -> None)
+    | _ -> None
+
+let gen_globals globals = List.map get_option (List.filter is_some (List.map gen_global globals))
 
 (* |translate| -- generate code for the whole program *)
 let translate (Prog (Block (globals, main, _, _), glodefs)) =
-  Target.preamble ();
-  gen_procs globals;
-  do_proc "pmain" 0 0 0 0 main;
-  List.iter gen_global !glodefs;
-  List.iter (fun (lab, s) -> Target.emit_string lab s) (string_table ());
-  Target.postamble ()
+    let procs = (do_proc "pmain" 0 0 0 0 main) :: gen_procs globals in
+    let global_vars = gen_globals !glodefs in
+    let strings = string_table () in
+    let asm = translate_progr global_vars procs strings in
+    let asm_strs = List.map string_of_instr asm in
+    List.iter print_endline asm_strs
 

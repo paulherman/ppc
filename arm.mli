@@ -7,8 +7,8 @@ type arm_part =
     
 type arm_instr = arm_part list
 
-val translate : Keiko.optree list -> (arm_instr * int * int list) list
+val translate : Keiko.optree list -> (arm_instr, string) Regalloc.allocator list
 
-val translate_progr : Dict.def list -> (Keiko.symbol * int * int * int * int * Keiko.optree list) list -> (Keiko.symbol * string) list -> arm_instr list
+val translate_progr : (Keiko.symbol * int) list -> (Keiko.symbol * int * int * int * int * Keiko.optree list) list -> (Keiko.symbol * string) list -> arm_instr list
 
 val string_of_instr : arm_instr -> string

@@ -34,6 +34,20 @@ type ('l, 'a, 'b) dag =
     | DagEdge of 'b
     | DagRoot of 'l * ('l, 'a, 'b) dag
     
+type ('a, 'b) either = Left of 'a | Right of 'b
+
+let is_some opt = match opt with
+    | Some _ -> true
+    | None -> false
+    
+let is_none opt = match opt with
+    | Some _ -> false
+    | None -> true
+    
+let get_option opt = match opt with
+    | Some value -> value
+    | None -> failwith "Unable to get value from None."
+    
 let rec flatten_list_tree tree = match tree with
     | Node (value, children) -> List.concat (List.map flatten_list_tree children) @ [value]
     
