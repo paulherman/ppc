@@ -328,7 +328,9 @@ let translate_progr globals procs strings =
     let globals_asm = if globals = [] then [] else [Lit ".data"] :: List.concat (List.map translate_global globals) in
     let procs_asm = [Lit ".text"] :: List.concat (List.map translate_proc procs) in
     let strings_asm = if strings = [] then [] else [Lit ".data"] :: List.concat (List.map translate_string strings) in
-    procs_asm @ globals_asm @ strings_asm
+    let preamble = [[Lit ".global pmain"]] in
+    let postamble = [] in
+    preamble @ procs_asm @ globals_asm @ strings_asm @ postamble
 
 let string_of_instr instr =
     let instr_str = String.concat "" (List.map string_of_arm_part instr) in
