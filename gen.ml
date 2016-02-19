@@ -100,12 +100,12 @@ let rec print_dp dp = match dp with DP (instr, children, costs) -> (print_string
 
 let sum_list = List.fold_left (+) 0
 
-let rule_compare x y =
-    let rule_value rule = match rule with
+let rule_compare (Rule (nt0, pat0, cost0, gen0)) (Rule (nt1, pat1, cost1, gen1)) =
+    let pat_value rule = match rule with
         | NonTerm _ -> 2
         | Term _ -> 1
         | PNode _ -> 0
-    in compare (rule_value x) (rule_value y)
+    in compare (pat_value pat0) (pat_value pat1)
     
 let option_is_none opt = match opt with
     | Some _ -> false
@@ -152,5 +152,8 @@ and emit_code symbol dp = match dp with DP (instr, children, costs) ->
 let dump_dp dp = match dp with
     DP (instr, children, costs) -> Hashtbl.iter (fun k v -> print_string k; print_endline "") costs
     
-let translate symbol rules ir = let dp = dp_of_optree (List.length rules) ir
-                                in apply_rules rules dp; emit_code symbol dp
+let translate symbol rules ir = 
+    let sorted_rules = List.sort rule_compare rules in
+    let dp = dp_of_optree (List.length sorted_rules) ir in
+    apply_rules sorted_rules dp; 
+    emit_code symbol dp
