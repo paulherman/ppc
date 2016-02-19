@@ -24,7 +24,8 @@ let nosym = "*nosym*"
 let gensym () = sprintf "g$" [fLab (label ())]
 
 (* |op| -- type of picoPascal operators *)
-type op = Plus | Minus | Times | Div | Mod | Eq 
+type op =
+  | Plus | Minus | Times | Div | Mod | Eq 
   | Uminus | Lt | Gt | Leq | Geq | Neq | And | Or | Not | PlusA | Lsl
   | Lsr | Asr | BitAnd | BitOr | BitNot
 
@@ -59,50 +60,8 @@ type inst =
   | DEFTMP of int
   | TEMP of int                 (* Temporary *)
 
-let op_name =
-  function
-      Plus -> "PLUS" | Minus -> "MINUS" | Times -> "TIMES"
-    | Div -> "DIV" | Mod -> "MOD" | Eq -> "EQ"
-    | Uminus -> "UMINUS" | Lt -> "LT" | Gt -> "GT" 
-    | Leq -> "LEQ" | Geq -> "GEQ" | Neq -> "NEQ" 
-    | And -> "AND" | Or -> "OR" | Not -> "NOT"
-    | PlusA -> "PLUSA" | Lsl -> "LSL"
-    | Lsr -> "LSR" | Asr -> "ASR" 
-    | BitAnd -> "BITAND" | BitOr -> "BITOR" | BitNot -> "BITNOT"
-
-let fOp w = fStr (op_name w)
-
-let fType1 =
-  function 0 -> fStr "" | 1 -> fStr "W" | s -> fMeta "*$*" [fNum s]
-
-let fInst =
-  function
-      CONST x ->        fMeta "CONST $" [fNum x]
-    | GLOBAL a ->       fMeta "GLOBAL $" [fStr a]
-    | LOCAL n ->        fMeta "LOCAL $" [fNum n]
-    | REGVAR i ->       fMeta "REGVAR $" [fNum i]
-    | LOADC ->          fStr "LOADC"
-    | LOADW ->          fStr "LOADW"
-    | STOREC ->         fStr "STOREC"
-    | STOREW ->         fStr "STOREW"
-    | ARG n ->          fMeta "ARG $" [fNum n]
-    | SLINK ->          fStr "STATLINK"
-    | PCALL n ->        fMeta "PCALL $" [fNum n]
-    | RESULTW ->        fStr "RESULTW"
-    | MONOP w ->        fMeta "$" [fStr (op_name w)]
-    | BINOP w ->        fMeta "$" [fStr (op_name w)]
-    | BOUND ->          fStr "BOUND"
-    | NCHECK ->         fStr "NCHECK"
-    | LABEL l ->        fMeta "LABEL $" [fLab l]
-    | JUMP l ->         fMeta "JUMP $" [fLab l]
-    | JUMPC (w, l) ->   fMeta "J$ $" [fStr (op_name w); fLab l]
-    | JCASE (labs, def) -> fMeta "JCASE $ $" [fNum (List.length labs); fLab def]
-    | LINE n ->         fMeta "LINE $" [fNum n]
-    | NOP ->            fStr "NOP"
-    | SEQ ->            fStr "SEQ"
-    | AFTER ->          fStr "AFTER"
-    | DEFTMP n ->       fMeta "DEFTMP $" [fNum n]
-    | TEMP n ->         fMeta "TEMP $" [fNum n]
+(* Operator trees *)
+type optree = inst list_tree
 
 let int_of_bool b = if b then 1 else 0
 
@@ -142,11 +101,6 @@ let negate =
   function Eq -> Neq | Neq -> Eq | Lt  -> Geq
     | Leq -> Gt | Gt  -> Leq | Geq -> Lt
     | _ -> failwith "negate"
-
-
-(* Operator trees *)
-
-type optree = inst Util.list_tree
 
 let rec canon_app t us =
   match t with
@@ -233,7 +187,11 @@ let string_of_inst instr = match instr with
     | NOP -> "NOP"
     | LINE line -> "LINE " ^ string_of_int line 
     | _ -> "UNKINSTR"
-            
+    
+let fOp w = fStr (string_of_op w)
+
+let fInst instr = fStr (string_of_inst instr)
+
 let rec print_optree prefix tree =  print_optree' prefix 0 tree
 and print_optree' prefix depth tree =
     let indent = String.concat "" (copy depth "  ") in
