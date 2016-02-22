@@ -6,7 +6,7 @@ type 'a asm_dag = (int, 'a, int) Util.dag
 
 type ('a, 'b) reg_dag = (int, 'a * 'b, 'b) Util.dag
 
-type 'a vreg_instr = 'a * int * int list
+type ('a, 'b) vreg_instr = 'a * int * (int list) * ('b list) * ('b list)
 
 type ('a, 'b) allocator =
     | Spill of 'b * int
@@ -38,7 +38,7 @@ and vreg_alloc_one regs mapping node = match node with
     | DagRoot (label, child) ->
         let (regs', child') = vreg_alloc_one regs mapping child in
         Hashtbl.add mapping label (get_vreg child');
-        (regs', child')
+        (regs', DagRoot (label, child'))
     | DagNode (value, children) ->
         let (regs', children') = vreg_alloc_many' regs mapping children in
         (1 + regs', DagNode ((value, regs'), children'))
@@ -48,7 +48,7 @@ and vreg_alloc_one regs mapping node = match node with
     
 (* Compute liveness intervals of virtual registers. *)
 let intervals_of_instrs instrs = 
-    let rec set_interval_of_instr starts ends count (instr, out_reg, in_regs) =
+    let rec set_interval_of_instr starts ends count (instr, out_reg, in_regs, preferred_regs, trashed_regs) =
         Hashtbl.replace starts out_reg (count + 0);
         List.iter (fun reg -> Hashtbl.replace ends reg (count - 1)) in_regs in
     let reg_interval intervals ends vreg start = if Hashtbl.mem ends vreg then intervals := (vreg, start, Hashtbl.find ends vreg) :: !intervals in
@@ -102,20 +102,20 @@ let rec close_intervals intervals used_regs count = match intervals with
       example: add dest, src <=> dest = dest + src <=> out = in0
       possible solution: append optional move instruction
 *)
-let rec reg_alloc regs regs_of_instr trashed_regs instrs = 
+let rec reg_alloc regs (instrs : ('a, 'b) vreg_instr list) = 
     let active_intervals = ref [] in
     let used_regs = ref [] in
     let intervals = ref (intervals_of_instrs instrs) in
     let interval_of_vreg = intervals_of_vregs !intervals in
     let spills = Hashtbl.create 1 in
-    let alloc_instr count (instr, out_reg, in_regs) = 
+    let alloc_instr count (instr, out_reg, in_regs, preferred_regs, trashed_regs) = 
         let operations = ref [] in
         let regs_needed = out_reg :: in_regs in
         active_intervals := close_intervals !active_intervals used_regs count;
         if !intervals != [] then begin
             let (vreg, istart, iend) = List.hd !intervals in
             if istart = count then begin
-                let possible_regs = list_diff (regs_of_instr instr) !used_regs in
+                let possible_regs = list_diff preferred_regs !used_regs in
                 let allocated_reg = 
                     if possible_regs = [] then spill active_intervals spills operations regs_needed
                     else List.hd possible_regs in
@@ -144,11 +144,3 @@ let rec reg_alloc regs regs_of_instr trashed_regs instrs =
         List.rev !operations
     in
     List.concat (List.mapi alloc_instr instrs)
-    
-let reg_alloc_better regs constraints thrashed_regs instructions =
-    let intervals = ref (intervals_of_instrs instructions) in
-    let used_regs = ref [] in
-    let spills = Hashtbl.create 1 in
-    let active_intervals = ref [] in
-    let alloc_instr count (instr, out_reg, in_regs) = [] in
-    List.concat (List.mapi alloc_instr instructions)

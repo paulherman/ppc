@@ -51,8 +51,8 @@ let print_allocator a = match a with
    R14=lr link register
    R15=pc program counter *)
 let regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"; "fp"; "sp"; "ip"; "lr"; "pc"]
-
-let free_regs = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"]
+let regs_volatile = ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9"; "r10"]
+let regs_stable = ["r5"; "r6"; "r7"; "r8"; "r9"; "r10"; "r0"; "r1"; "r2"; "r3"; "r4"]
 
 let arm_rules = [
     Rule (
@@ -320,6 +320,7 @@ let rec vreg_tree_of_vreg_dag dag = match dag with
             | DagNode ((ps, reg_child), cs) -> DagNode ((ps, reg), cs)
             | _ -> failwith "Failed to reduce virtual register DAG to tree."
     )
+    | DagRoot (label, child) -> DagRoot (label, child)
     | _ -> failwith "Failed to reduce virtual register DAG to tree."
 and combine part child node = match node with 
     | DagNode ((parts, reg), cs) -> 
@@ -329,15 +330,10 @@ and combine part child node = match node with
         )
     | _ -> failwith "Failed to reduce virtual register DAG to tree."
     
-let rec vreg_list_of_vreg_tree tree = match tree with
-    | DagNode ((parts, reg), children) -> List.concat (List.map vreg_list_of_vreg_tree children) @ [(parts, reg, List.map get_vreg_id children)]
-    | DagEdge _ -> []
-    | DagRoot (label, child) -> vreg_list_of_vreg_tree child
-    
-let regs_of_instr instr = match instr with
+let regs_of_instr set instr = match instr with
     | Lit l :: _ ->
         if starts_with l "call" then ["r0"]
-        else free_regs
+        else set
     | _ -> failwith "Unable to recognize instruction."
 
 let trashed_regs instr = match instr with
@@ -351,12 +347,20 @@ let trashed_regs instr = match instr with
         else []
     | _ -> failwith "Unable to recognize instruction."
     
+let rec vreg_list_of_vreg_tree tree = match tree with
+    | DagNode ((parts, reg), children) -> (parts, reg, List.map get_vreg_id children, regs_of_instr regs_volatile parts, trashed_regs parts) :: List.concat (List.map vreg_list_of_vreg_tree children)
+    | DagEdge _ -> []
+    | DagRoot (label, child) ->(
+        match vreg_list_of_vreg_tree child with
+            | [] -> failwith "Unable to convert tree of instructions to list of instructions."
+            | (parts, out_reg, in_regs, _, trashed_regs) :: is -> (parts, out_reg, in_regs, regs_of_instr regs_stable parts, trashed_regs) :: is)
+    
 let translate irs =
     let arm_dags = List.concat (List.map (fun ir -> List.map dag_of_arm_instr_tree (List.map eliminate_parts (translate "stmt" arm_rules ir))) irs) in
     let vreg_dags = vreg_alloc arm_dags in
     let vreg_trees = List.map vreg_tree_of_vreg_dag vreg_dags in
-    let vreg_lists = List.map vreg_list_of_vreg_tree vreg_trees in
-    let reg_alloc_ops = reg_alloc free_regs regs_of_instr trashed_regs (List.concat vreg_lists) in
+    let vreg_lists = List.map List.rev (List.map vreg_list_of_vreg_tree vreg_trees) in
+    let reg_alloc_ops = reg_alloc regs_stable (List.concat vreg_lists) in
     reg_alloc_ops
     
 let rec count_spills allocs = match allocs with
