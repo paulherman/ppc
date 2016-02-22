@@ -380,6 +380,12 @@ let process_allocs instrs =
             Hashtbl.replace map vreg reg
         | Instr parts ->
             code := (List.map reg_of_vreg parts) :: !code
+        | Move (vreg, reg) ->
+            let current_reg = Hashtbl.find map vreg in
+            Hashtbl.replace map vreg reg;
+            code := [Lit ("mov " ^ reg ^ ", " ^ current_reg)] :: !code
+        | Spill (reg, vreg) -> ()
+        | Fill (reg, vreg) -> ()
     in
     List.iter gen instrs;
     List.rev !code

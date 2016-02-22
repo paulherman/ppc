@@ -112,6 +112,7 @@ let rec reg_alloc regs (instrs : ('a, 'b) vreg_instr list) =
         let operations = ref [] in
         let regs_needed = out_reg :: in_regs in
         active_intervals := close_intervals !active_intervals used_regs count;
+        (* TODO: move / spill any trashed regs *)
         if !intervals != [] then begin
             let (vreg, istart, iend) = List.hd !intervals in
             if istart = count then begin
