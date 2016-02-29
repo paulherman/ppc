@@ -9,8 +9,8 @@ type ('a, 'b) reg_dag = (int, 'a * 'b, 'b) Util.dag
 type ('a, 'b) vreg_instr = 'a * int * (int list) * ('b list) * ('b list)
 
 type ('a, 'b) allocator =
-    | Spill of 'b * int
-    | Fill of 'b * int
+    | Spill of int * 'b
+    | Fill of int * 'b
     | Assign of int * 'b
     | Move of int * 'b
     | Instr of 'a
@@ -45,54 +45,110 @@ and vreg_alloc_one regs mapping node = match node with
     | DagEdge label ->
         if Hashtbl.mem mapping label then (regs, DagEdge (Hashtbl.find mapping label)) 
         else failwith ("Unable to find register " ^ string_of_int label ^ " for label from DAG.")
+
+(* Get live intervals for virtual registers from instructions list *)
+let intervals_of_instrs instrs =
+    let intervals = Hashtbl.create 1 in
+    List.iteri (fun count (instr, out_reg, in_regs, pref_regs, trash_regs) ->
+        Hashtbl.replace intervals out_reg (count, count - 1);
+        List.iter (fun in_reg -> Hashtbl.replace intervals in_reg (fst (Hashtbl.find intervals in_reg), count)) in_regs
+    ) instrs;
+    let intervals_list = List.filter (fun (v, s, e) -> e >= s) (Hashtbl.fold (fun vreg (s, e) is -> (vreg, s, e) :: is) intervals []) in
+    List.sort (fun (r0, s0, e0) (r1, s1, e1) -> compare s0 s1) intervals_list
+(*interval 2: 1 -> 2
+interval 1: 2 -> 2
+interval 6: 5 -> 6
+interval 5: 6 -> 6
+interval 10: 9 -> 10
+interval 9: 10 -> 10
+interval 21: 16 -> 21
+interval 18: 17 -> 17
+interval 19: 18 -> 20
+interval 16: 19 -> 19
+interval 17: 20 -> 20
+interval 20: 21 -> 21
+interval 27: 24 -> 27
+interval 24: 25 -> 25
+interval 25: 26 -> 26
+interval 26: 27 -> 27
+interval 34: 32 -> 32
+interval 35: 33 -> 35
+interval 32: 34 -> 34
+interval 33: 35 -> 35
+*)
+
+let pregs_of_active_intervals intervals = List.map (fun (vreg, preg, s, e) -> preg) intervals
+
+(* Assign the vreg to some preg, possibly by spilling some other register *)
+let preg_of_vreg ops pregs unassignable unspillable active_intervals spilled_intervals vreg s e = 
+    let update preg =
+        active_intervals := (vreg, preg, s, e) :: !active_intervals;
+        preg in
+    let pregs = list_diff pregs unassignable in
+    if pregs != [] then
+        update (List.hd pregs)
+    else begin (* Spill another register *)
+        let spillable = List.filter (fun (v, p, s, e) -> List.mem p pregs && not (List.mem v unspillable)) !active_intervals in
+        match List.sort (fun (v0, p0, s0, e0) (v1, p1, s1, e1) -> compare e1 e0) spillable with
+            | [] -> failwith "Unable to find a register to spill."
+            | (spilled :: unspilled) -> begin
+                let (svreg, preg, s, e) = spilled in
+                ops := Spill (svreg, preg) :: !ops;
+                spilled_intervals := (svreg, s, e) :: !spilled_intervals;
+                active_intervals := List.filter (fun (v, p, s, e) -> v != svreg) !active_intervals;
+                update preg
+            end
+    end
+
+(* Allocate registers for one instruction *)   
+let reg_alloc_instr regs intervals active_intervals spilled_intervals count instr =
+    let (instr, out_reg, in_regs, pref_regs, trash_regs) = instr in
+    let ops = ref [] in
+    (* Remove closed intervals *)
+    active_intervals := List.filter (fun (vreg, preg, s, e) -> e >= count) !active_intervals;
+    (* Spill or move trashed registers *)
+    List.iter (fun preg ->
+        if List.exists (fun (v, p, s, e) -> preg = p) !active_intervals then begin
+            let (vreg, preg, s, e) = List.find (fun (v, p, s, e) -> preg = p) !active_intervals in
+            active_intervals := List.filter (fun (v, p, s, e) -> preg != p) !active_intervals;
+            let unspillable = in_regs in
+            let unassignable = trash_regs @ (pregs_of_active_intervals !active_intervals) in
+            let preg = preg_of_vreg ops regs unassignable unspillable active_intervals spilled_intervals vreg s e in
+            ops := Move (vreg, preg) :: !ops
+        end
+    ) trash_regs;
+    (* Allocate the out register *)
+    if !intervals != [] then begin
+        let (out_reg, s, e) = List.hd !intervals in
+        if s = count then begin
+            let unspillable = in_regs in
+            let unassignable = pregs_of_active_intervals !active_intervals in
+            let preg = preg_of_vreg ops pref_regs unassignable unspillable active_intervals spilled_intervals out_reg s e in
+            ops := Assign (out_reg, preg) :: !ops;
+            intervals := List.tl !intervals
+        end;
+    end;
+    (* Fill back spilled in registers *)
+    List.iter (fun in_reg ->
+        if not (List.exists (fun (vreg, preg, s, e) -> in_reg = vreg) !active_intervals) then begin
+            if not (List.exists (fun (vreg, s, e) -> in_reg = vreg) !spilled_intervals) then failwith ("Unable to fill unspilled register " ^ string_of_int in_reg ^ ".") else ();
+            let (in_reg, s, e) = List.find (fun (vreg, s, e) -> vreg = in_reg) !spilled_intervals in
+            let unspillable = out_reg :: in_regs in
+            let unassignable = trash_regs @ (pregs_of_active_intervals !active_intervals) in
+            let preg = preg_of_vreg ops regs unassignable unspillable active_intervals spilled_intervals in_reg s e in
+            spilled_intervals := List.filter (fun (v, s, e) -> v != in_reg) !spilled_intervals;
+            ops := Fill (in_reg, preg) :: !ops
+        end
+    ) in_regs;
+    (* Return the operations needed to assign registers for this instruction *)
+    List.rev (Instr instr :: !ops)
     
-(* Compute liveness intervals of virtual registers. *)
-let intervals_of_instrs instrs = 
-    let rec set_interval_of_instr starts ends count (instr, out_reg, in_regs, preferred_regs, trashed_regs) =
-        Hashtbl.replace starts out_reg (count + 0);
-        List.iter (fun reg -> Hashtbl.replace ends reg (count - 1)) in_regs in
-    let reg_interval intervals ends vreg start = if Hashtbl.mem ends vreg then intervals := (vreg, start, Hashtbl.find ends vreg) :: !intervals in
-    let interval_compare (reg0, start0, end0) (reg1, start1, end1) = if start0 == start1 then 0 else if start0 > start1 then 1 else -1 in
-    let intervals = ref [] in
-    let starts_map = Hashtbl.create 1 in
-    let ends_map = Hashtbl.create 1 in
-    List.iteri (set_interval_of_instr starts_map ends_map) instrs;
-    Hashtbl.iter (reg_interval intervals ends_map) starts_map;
-    let sorted_intervals = List.sort interval_compare !intervals in
-    sorted_intervals
-    
-(* Choose interval to spill based on the end point. *)
-let choose_spill_interval intervals regs_needed =
-    let interval_compare (vreg0, reg0, start0, end0) (vreg1, reg1, start1, end1) = 0 - (compare end0 end1) in
-    let end_sorted_intervals = List.sort interval_compare !intervals in
-    let rec pick is = match is with
-        | [] -> failwith "Unable to find a virtual register to spill."
-        | (vreg, reg, istart, iend) :: is -> 
-            if List.exists (fun r -> r == vreg) regs_needed then 
-                let (remove, is') = pick is in (remove, (vreg, reg, istart, iend) :: is')
-            else ((vreg, reg, istart, iend), is)
-    in
-    let (remove, remaining) = pick end_sorted_intervals in
-    intervals := remaining;
-    remove
-    
-let intervals_of_vregs intervals =
-    let map = Hashtbl.create 1 in
-    List.iter (fun (vreg, istart, iend) -> Hashtbl.add map vreg (vreg, istart, iend)) intervals;
-    map
-    
-let spill intervals spills operations regs_needed =
-    let (spilled_vreg, spilled_reg, spilled_start, spilled_end) = choose_spill_interval intervals regs_needed in
-    operations := Spill (spilled_reg, spilled_vreg) :: !operations;
-    Hashtbl.add spills spilled_vreg ();
-    spilled_reg
-    
-let rec close_intervals intervals used_regs count = match intervals with
-    | [] -> []
-    | (vreg, reg, istart, iend) :: is ->
-        let is' = close_intervals is used_regs count in
-        if iend < count then (used_regs := List.filter (fun r -> r != reg) !used_regs; is')
-        else (vreg, reg, istart, iend) :: is'
+(* Allocate registers for instructions list *)
+let reg_alloc (regs : 'b list) (instrs : ('a, 'b) vreg_instr list) = 
+    let intervals = ref (intervals_of_instrs instrs) in (* List of intervals for vregs ordered by starting position *)
+    let active_intervals = ref [] in (* List of active intervals at current instruction *)
+    let spilled_intervals = ref [] in
+    List.concat (List.mapi (reg_alloc_instr regs intervals active_intervals spilled_intervals) instrs)
     
 (* TODO (not actually needed for ARM):
     - allow instruction to trash physical registers (i.e. div on x86 trashes EDX even if not used)
@@ -102,46 +158,3 @@ let rec close_intervals intervals used_regs count = match intervals with
       example: add dest, src <=> dest = dest + src <=> out = in0
       possible solution: append optional move instruction
 *)
-let rec reg_alloc regs (instrs : ('a, 'b) vreg_instr list) = 
-    let active_intervals = ref [] in
-    let used_regs = ref [] in
-    let intervals = ref (intervals_of_instrs instrs) in
-    let interval_of_vreg = intervals_of_vregs !intervals in
-    let spills = Hashtbl.create 1 in
-    let alloc_instr count (instr, out_reg, in_regs, preferred_regs, trashed_regs) = 
-        let operations = ref [] in
-        let regs_needed = out_reg :: in_regs in
-        active_intervals := close_intervals !active_intervals used_regs count;
-        (* TODO: move / spill any trashed regs *)
-        if !intervals != [] then begin
-            let (vreg, istart, iend) = List.hd !intervals in
-            if istart = count then begin
-                let possible_regs = list_diff preferred_regs !used_regs in
-                let allocated_reg = 
-                    if possible_regs = [] then spill active_intervals spills operations regs_needed
-                    else List.hd possible_regs in
-                operations := Assign (vreg, allocated_reg) :: !operations;
-                used_regs := allocated_reg :: !used_regs;
-                intervals := List.tl !intervals;
-                active_intervals := (vreg, allocated_reg, istart, iend) :: !active_intervals
-            end;
-        end;
-        let filled_intervals = ref [] in
-        List.iter (fun vreg -> 
-            if Hashtbl.mem spills vreg then begin
-                let possible_regs = list_diff regs !used_regs in
-                let allocated_reg = 
-                    if possible_regs = [] then spill active_intervals spills operations regs_needed
-                    else List.hd possible_regs in
-                operations := Fill (allocated_reg, vreg) :: !operations;
-                filled_intervals := (vreg, allocated_reg) :: !filled_intervals
-            end
-        ) in_regs;
-        List.iter (fun (vreg, reg) ->
-            let (vreg, istart, iend) = Hashtbl.find interval_of_vreg vreg in
-            active_intervals := (vreg, reg, istart, iend) :: !active_intervals
-        ) !filled_intervals;
-        operations := Instr instr :: !operations;
-        List.rev !operations
-    in
-    List.concat (List.mapi alloc_instr instrs)

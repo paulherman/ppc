@@ -7,8 +7,8 @@ type ('a, 'b) reg_dag = (int, 'a * 'b, 'b) Util.dag
 type ('a, 'b) vreg_instr = 'a * int * (int list) * ('b list) * ('b list)
 
 type ('a, 'b) allocator =
-    | Spill of 'b * int
-    | Fill of 'b * int
+    | Spill of int * 'b
+    | Fill of int * 'b
     | Assign of int * 'b
     | Move of int * 'b
     | Instr of 'a

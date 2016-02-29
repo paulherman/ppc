@@ -33,11 +33,10 @@ let string_of_arm_part part = match part with
     
 let print_instr i = match i with
     | (instr, out_reg, in_regs) -> print_endline (String.concat "" (List.map string_of_arm_part instr))
- 
   
 let print_allocator a = match a with
-    | Spill (reg, vreg) -> Printf.printf "spill %s v%d\n" reg vreg
-    | Fill (reg, vreg) -> Printf.printf "fill %s v%d\n" reg vreg
+    | Spill (vreg, reg) -> Printf.printf "spill %s v%d\n" reg vreg
+    | Fill (vreg, reg) -> Printf.printf "fill %s v%d\n" reg vreg
     | Assign (vreg, reg) -> Printf.printf "assign v%d %s\n" vreg reg
     | Instr instr -> print_endline (String.concat "" (List.map string_of_arm_part instr))
 
