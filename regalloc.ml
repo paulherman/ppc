@@ -55,27 +55,6 @@ let intervals_of_instrs instrs =
     ) instrs;
     let intervals_list = List.filter (fun (v, s, e) -> e >= s) (Hashtbl.fold (fun vreg (s, e) is -> (vreg, s, e) :: is) intervals []) in
     List.sort (fun (r0, s0, e0) (r1, s1, e1) -> compare s0 s1) intervals_list
-(*interval 2: 1 -> 2
-interval 1: 2 -> 2
-interval 6: 5 -> 6
-interval 5: 6 -> 6
-interval 10: 9 -> 10
-interval 9: 10 -> 10
-interval 21: 16 -> 21
-interval 18: 17 -> 17
-interval 19: 18 -> 20
-interval 16: 19 -> 19
-interval 17: 20 -> 20
-interval 20: 21 -> 21
-interval 27: 24 -> 27
-interval 24: 25 -> 25
-interval 25: 26 -> 26
-interval 26: 27 -> 27
-interval 34: 32 -> 32
-interval 35: 33 -> 35
-interval 32: 34 -> 34
-interval 33: 35 -> 35
-*)
 
 let pregs_of_active_intervals intervals = List.map (fun (vreg, preg, s, e) -> preg) intervals
 
