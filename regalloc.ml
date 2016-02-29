@@ -110,7 +110,6 @@ let reg_alloc_instr regs intervals active_intervals spilled_intervals count inst
     (* Fill back spilled in registers *)
     List.iter (fun in_reg ->
         if not (List.exists (fun (vreg, preg, s, e) -> in_reg = vreg) !active_intervals) then begin
-            if not (List.exists (fun (vreg, s, e) -> in_reg = vreg) !spilled_intervals) then failwith ("Unable to fill unspilled register " ^ string_of_int in_reg ^ ".") else ();
             let (in_reg, s, e) = List.find (fun (vreg, s, e) -> vreg = in_reg) !spilled_intervals in
             let unspillable = out_reg :: in_regs in
             let unassignable = trash_regs @ (pregs_of_active_intervals !active_intervals) in
@@ -130,7 +129,6 @@ let reg_alloc (regs : 'b list) (instrs : ('a, 'b) vreg_instr list) =
     List.concat (List.mapi (reg_alloc_instr regs intervals active_intervals spilled_intervals) instrs)
     
 (* TODO (not actually needed for ARM):
-    - allow instruction to trash physical registers (i.e. div on x86 trashes EDX even if not used)
     - allow in, out registers to be specified at each instructions instead of when declared (i.e. map from vreg to list of pregs)
       maybe not needed as a register is used twice only in the case of DEFTMP combined with USETEMP, but then we can generate optional moves
     - allow to specify two vregs to be allocated to the same preg
