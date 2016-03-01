@@ -63,20 +63,20 @@ let preg_of_vreg ops pregs unassignable unspillable active_intervals spilled_int
     let update preg =
         active_intervals := (vreg, preg, s, e) :: !active_intervals;
         preg in
-    let pregs = list_diff pregs unassignable in
-    if pregs != [] then
-        update (List.hd pregs)
+    let free = list_diff pregs unassignable in
+    if free != [] then
+        update (List.hd free)
     else begin (* Spill another register *)
         let spillable = List.filter (fun (v, p, s, e) -> List.mem p pregs && not (List.mem v unspillable)) !active_intervals in
-        match List.sort (fun (v0, p0, s0, e0) (v1, p1, s1, e1) -> compare e1 e0) spillable with
-            | [] -> failwith "Unable to find a register to spill."
-            | (spilled :: unspilled) -> begin
-                let (svreg, preg, s, e) = spilled in
-                ops := Spill (svreg, preg) :: !ops;
-                spilled_intervals := (svreg, s, e) :: !spilled_intervals;
-                active_intervals := List.filter (fun (v, p, s, e) -> v != svreg) !active_intervals;
-                update preg
-            end
+        if spillable = [] then failwith "Unable to find a register to spill."
+        else begin
+            let (spilled :: unspilled) = List.sort (fun (v0, p0, s0, e0) (v1, p1, s1, e1) -> compare e1 e0) spillable in
+            let (svreg, preg, s, e) = spilled in
+            ops := Spill (svreg, preg) :: !ops;
+            spilled_intervals := (svreg, s, e) :: !spilled_intervals;
+            active_intervals := List.filter (fun (v, p, s, e) -> v != svreg) !active_intervals;
+            update preg
+        end
     end
 
 (* Allocate registers for one instruction *)   

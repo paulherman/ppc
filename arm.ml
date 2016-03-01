@@ -389,10 +389,10 @@ let process_allocs frame_size instrs =
         | Spill (vreg, reg) ->
             spill_base := !spill_base - 4;
             Hashtbl.replace spill_addr vreg !spill_base;
-            code := [Lit ("str " ^ reg ^ "[fp, " ^ string_of_int !spill_base ^ "]")] :: [Lit ("@Spill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
+            code := [Lit ("str " ^ reg ^ ", [fp, " ^ string_of_int !spill_base ^ "]")] :: [Lit ("@Spill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
         | Fill (vreg, reg) ->
             let fill_addr = Hashtbl.find spill_addr vreg in
-            code := [Lit ("ldr " ^ reg ^ "[fp, " ^ string_of_int fill_addr  ^ "]")] :: [Lit ("@Fill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
+            code := [Lit ("ldr " ^ reg ^ ", [fp, " ^ string_of_int fill_addr  ^ "]")] :: [Lit ("@Fill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
     in
     List.iter gen instrs;
     List.rev !code
