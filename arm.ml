@@ -208,7 +208,7 @@ let arm_rules = [
         "stmt",
         GPNode (ARG 0, (fun (ARG n) -> n >= 4), [NonTerm "reg"]),
         1,
-        fun [Right (ARG n); Left r] -> [ArmInstrNode ([Lit "str "; In; Lit (", [sp" ^ string_of_int (4 * n - 16) ^ "]")], [r])]
+        fun [Right (ARG n); Left r] -> [ArmInstrNode ([Lit "str "; In; Lit (", [sp, #" ^ string_of_int (4 * n - 16) ^ "]")], [r])]
     );
     Rule (
         "stmt",
@@ -367,9 +367,11 @@ let rec count_spills allocs = match allocs with
     | (Spill _) :: allocs -> 1 + count_spills allocs
     | _ :: allocs -> count_spills allocs
     
-let process_allocs instrs =
+let process_allocs frame_size instrs =
     let map = Hashtbl.create 1 in
     let code = ref [] in
+    let spill_base = ref frame_size in
+    let spill_addr = Hashtbl.create 1 in
     let reg_of_vreg part = match part with
         | VReg vreg -> PReg (Hashtbl.find map vreg)
         | part -> part
@@ -384,8 +386,13 @@ let process_allocs instrs =
             let current_reg = Hashtbl.find map vreg in
             Hashtbl.replace map vreg reg;
             code := [Lit ("mov " ^ reg ^ ", " ^ current_reg)] :: [Lit ("@Move " ^ string_of_int vreg ^ " to " ^ reg)] :: !code
-        | Spill (vreg, reg) -> code := [Lit ("@Spill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
-        | Fill (vreg, reg) -> code := [Lit ("@Fill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
+        | Spill (vreg, reg) ->
+            spill_base := !spill_base - 4;
+            Hashtbl.replace spill_addr vreg !spill_base;
+            code := [Lit ("str " ^ reg ^ "[fp, " ^ string_of_int !spill_base ^ "]")] :: [Lit ("@Spill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
+        | Fill (vreg, reg) ->
+            let fill_addr = Hashtbl.find spill_addr vreg in
+            code := [Lit ("ldr " ^ reg ^ "[fp, " ^ string_of_int fill_addr  ^ "]")] :: [Lit ("@Fill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
     in
     List.iter gen instrs;
     List.rev !code
@@ -394,7 +401,7 @@ let translate_proc (label, proc_level, num_args, num_reg_vars, frame_size, irs) 
     let alloc_body = translate irs in
     let spills = count_spills alloc_body in
     let spills_size = 4 * spills in
-    let bodies = process_allocs alloc_body in
+    let bodies = process_allocs frame_size alloc_body in
     [Lit (label ^ ":")] :: bodies
     
 let translate_global (label, size) = [[Lit (".comm " ^ label ^ ", " ^ string_of_int size ^ ", 4")]]
