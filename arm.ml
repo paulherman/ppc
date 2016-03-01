@@ -331,13 +331,13 @@ and combine part child node = match node with
     
 let regs_of_instr set instr = match instr with
     | Lit l :: _ ->
-        if starts_with l "call" then ["r0"]
+        if starts_with l "bl" then ["r0"]
         else set
     | _ -> failwith "Unable to recognize instruction."
 
 let trashed_regs instr = match instr with
     | Lit l :: _ ->
-        if starts_with l "call" then ["r0"; "r1"; "r2"; "r3"]
+        if starts_with l "bl" then ["r0"; "r1"; "r2"; "r3"]
         else if starts_with l "mov r0" then ["r0"]
         else if starts_with l "mov r1" then ["r1"]
         else if starts_with l "mov r2" then ["r2"]
@@ -383,7 +383,7 @@ let process_allocs instrs =
         | Move (vreg, reg) ->
             let current_reg = Hashtbl.find map vreg in
             Hashtbl.replace map vreg reg;
-            code := [Lit ("@Move " ^ string_of_int vreg ^ " with " ^ reg)] :: [Lit ("mov " ^ reg ^ ", " ^ current_reg)] :: !code
+            code := [Lit ("mov " ^ reg ^ ", " ^ current_reg)] :: [Lit ("@Move " ^ string_of_int vreg ^ " to " ^ reg)] :: !code
         | Spill (vreg, reg) -> code := [Lit ("@Spill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
         | Fill (vreg, reg) -> code := [Lit ("@Fill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
     in

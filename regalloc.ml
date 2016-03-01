@@ -89,11 +89,13 @@ let reg_alloc_instr regs intervals active_intervals spilled_intervals count inst
     List.iter (fun preg ->
         if List.exists (fun (v, p, s, e) -> preg = p) !active_intervals then begin
             let (vreg, preg, s, e) = List.find (fun (v, p, s, e) -> preg = p) !active_intervals in
-            active_intervals := List.filter (fun (v, p, s, e) -> preg != p) !active_intervals;
-            let unspillable = in_regs in
-            let unassignable = trash_regs @ (pregs_of_active_intervals !active_intervals) in
-            let preg = preg_of_vreg ops regs unassignable unspillable active_intervals spilled_intervals vreg s e in
-            ops := Move (vreg, preg) :: !ops
+            if e > count then begin
+                active_intervals := List.filter (fun (v, p, s, e) -> preg != p) !active_intervals;
+                let unspillable = in_regs in
+                let unassignable = trash_regs @ (pregs_of_active_intervals !active_intervals) in
+                let preg = preg_of_vreg ops regs unassignable unspillable active_intervals spilled_intervals vreg s e in
+                ops := Move (vreg, preg) :: !ops
+            end
         end
     ) trash_regs;
     (* Allocate the out register *)
