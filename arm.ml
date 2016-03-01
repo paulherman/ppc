@@ -300,14 +300,14 @@ let rec dag_of_arm_instr_tree tree = match tree with
     | ArmDefTemp (label, tree) -> DagRoot (label, dag_of_arm_instr_tree tree)
     | ArmUseTemp label -> DagEdge label
     | ArmInstrPart _ -> failwith "Unable to transform incomplete instruction to DAG node."
-    
+
 let rec get_vreg_id node = match node with
     | DagEdge reg -> reg
     | DagNode ((ps, reg), cs) -> reg
     | DagRoot (label, child) -> get_vreg_id child
-    
+
 let get_vreg node = VReg (get_vreg_id node)
-    
+
 let rec vreg_tree_of_vreg_dag dag = match dag with
     | DagEdge reg -> DagEdge reg
     | DagNode (([], reg), []) -> DagNode (([], reg), [])
@@ -319,7 +319,7 @@ let rec vreg_tree_of_vreg_dag dag = match dag with
             | DagNode ((ps, reg_child), cs) -> DagNode ((ps, reg), cs)
             | _ -> failwith "Failed to reduce virtual register DAG to tree."
     )
-    | DagRoot (label, child) -> DagRoot (label, child)
+    | DagRoot (label, child) -> DagRoot (label, vreg_tree_of_vreg_dag child)
     | _ -> failwith "Failed to reduce virtual register DAG to tree."
 and combine part child node = match node with 
     | DagNode ((parts, reg), cs) -> 
@@ -349,7 +349,7 @@ let trashed_regs instr = match instr with
 let rec vreg_list_of_vreg_tree tree = match tree with
     | DagNode ((parts, reg), children) -> (parts, reg, List.map get_vreg_id children, regs_of_instr regs_volatile parts, trashed_regs parts) :: List.concat (List.map vreg_list_of_vreg_tree children)
     | DagEdge _ -> []
-    | DagRoot (label, child) ->(
+    | DagRoot (label, child) -> (
         match vreg_list_of_vreg_tree child with
             | [] -> failwith "Unable to convert tree of instructions to list of instructions."
             | (parts, out_reg, in_regs, _, trashed_regs) :: is -> (parts, out_reg, in_regs, regs_of_instr regs_stable parts, trashed_regs) :: is)
@@ -376,15 +376,16 @@ let process_allocs instrs =
     in
     let gen instr = match instr with
         | Assign (vreg, reg) ->
-            Hashtbl.replace map vreg reg
+            Hashtbl.replace map vreg reg;
+            code := [Lit ("@Assign " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
         | Instr parts ->
             code := (List.map reg_of_vreg parts) :: !code
         | Move (vreg, reg) ->
             let current_reg = Hashtbl.find map vreg in
             Hashtbl.replace map vreg reg;
-            code := [Lit ("mov " ^ reg ^ ", " ^ current_reg)] :: !code
-        | Spill (reg, vreg) -> ()
-        | Fill (reg, vreg) -> ()
+            code := [Lit ("@Move " ^ string_of_int vreg ^ " with " ^ reg)] :: [Lit ("mov " ^ reg ^ ", " ^ current_reg)] :: !code
+        | Spill (vreg, reg) -> code := [Lit ("@Spill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
+        | Fill (vreg, reg) -> code := [Lit ("@Fill " ^ string_of_int vreg ^ " with " ^ reg)] :: !code
     in
     List.iter gen instrs;
     List.rev !code
