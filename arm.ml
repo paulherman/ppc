@@ -134,6 +134,12 @@ let arm_rules = [
     );
     Rule (
         "reg",
+        PNode (LOADC, [NonTerm "addr"]),
+        1,
+        fun [_; Left a] -> [ArmInstrNode ([Lit "ldrb "; Out; Lit ", "; In], [a])]
+    );
+    Rule (
+        "reg",
         PNode (LOADW, [NonTerm "addr"]),
         1,
         fun [_; Left a] -> [ArmInstrNode ([Lit "ldr "; Out; Lit ", "; In], [a])]
@@ -143,6 +149,12 @@ let arm_rules = [
         PNode (BINOP Minus, [NonTerm "reg"; NonTerm "op"]),
         1,
         fun [_; Left r; Left o] -> [ArmInstrNode ([Lit "sub "; Out; Lit ", "; In; Lit ", "; In], [r; o])]
+    );
+    Rule (
+        "reg",
+        PNode (MONOP BitNot, [NonTerm "reg"]),
+        1,
+        fun [_; Left r] -> [ArmInstrNode ([Lit "mvn "; Out; Lit ", "; In], [r])]
     );
     Rule (
         "reg",
@@ -173,6 +185,12 @@ let arm_rules = [
         PNode (BINOP Plus, [NonTerm "reg"; NonTerm "op"]),
         1,
         fun [_; Left r; Left o] -> [ArmInstrNode ([Lit "add "; Out; Lit ", "; In; Lit ", "; In], [r; o])]
+    );
+    Rule (
+        "stmt",
+        PNode (STOREC, [NonTerm "reg"; NonTerm "addr"]),
+        1,
+        fun [_; Left r; Left a] -> [ArmInstrNode ([Lit "strb "; In; Lit ", "; In], [r; a])]
     );
     Rule (
         "stmt",
