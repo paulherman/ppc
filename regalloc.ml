@@ -20,10 +20,7 @@ let get_vreg vreg_dag = match vreg_dag with
     | DagEdge vreg -> vreg
     | DagRoot _ -> failwith "Unable to get register from DAG."
 
-(* Augment instruction DAG with virtual registers from an infinite pool. 
-   TODO:
-    - some instructions output more than one register (i.e. div on x86)
-*)
+(* Augment instruction DAG with virtual registers from an infinite pool *)
 let rec vreg_alloc trees = 
     let mapping = Hashtbl.create 1 in
     let (_, trees') = vreg_alloc_many' 0 mapping trees in
@@ -83,8 +80,8 @@ let preg_of_vreg ops pregs unassignable unspillable active_intervals spilled_int
             active_intervals := (vreg, sp, pregs, s, e) :: List.filter (fun (v, _, _, _, _) -> v = sv) !active_intervals;
             sp
         else begin
-            (* TODO: try to move a register needed for the current instr to another register and then spill *)
-            failwith "TODO: try to move a register needed for the current instr to another register and then spill"
+            (* On CISC platforms, try to move a register needed for the current instr to another register and then spill *)
+            failwith "Try to move a register needed for the current instr to another register and then spill"
         end
     end
     
@@ -133,7 +130,7 @@ let reg_alloc_instr regs intervals active_intervals spilled_intervals count inst
 let reg_alloc (regs : 'b list) (instrs : ('a, 'b) vreg_instr list) = 
     let intervals = ref (intervals_of_instrs instrs) in (* List of intervals for vregs ordered by starting position *)
     let active_intervals = ref [] in (* List of active intervals at current instruction *)
-    let spilled_intervals = ref [] in
+    let spilled_intervals = ref [] in (* List of currently spilled intervals *)
     List.concat (List.mapi (reg_alloc_instr regs intervals active_intervals spilled_intervals) instrs)
     
 (* TODO (not actually needed for ARM):
