@@ -1,4 +1,3 @@
-# 1 "keiko.mlp"
 (* ppc/keiko.ml *)
 
 open Print

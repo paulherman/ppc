@@ -133,10 +133,3 @@ let reg_alloc (regs : 'b list) (instrs : ('a, 'b) vreg_instr list) =
     let spilled_intervals = ref [] in (* List of currently spilled intervals *)
     List.concat (List.mapi (reg_alloc_instr regs intervals active_intervals spilled_intervals) instrs)
     
-(* TODO (not actually needed for ARM):
-    - allow in, out registers to be specified at each instructions instead of when declared (i.e. map from vreg to list of pregs)
-      maybe not needed as a register is used twice only in the case of DEFTMP combined with USETEMP, but then we can generate optional moves
-    - allow to specify two vregs to be allocated to the same preg
-      example: add dest, src <=> dest = dest + src <=> out = in0
-      possible solution: append optional move instruction
-*)
