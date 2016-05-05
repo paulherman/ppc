@@ -418,9 +418,13 @@ let process_allocs frame_size instrs =
 let translate_proc (label, proc_level, num_args, num_reg_vars, frame_size, irs) = 
     let alloc_body = translate irs in
     let spills = count_spills alloc_body in
-    let spills_size = 4 * spills in
+    let stack_size = 4 * spills in
     let bodies = process_allocs frame_size alloc_body in
-    [Lit (label ^ ":")] :: bodies
+    let save_args = if num_args <= 2 then Lit "stmfd sp!, {r0-r1}" else Lit "stmfd sp!, {r0-r3}" in
+    let save_regs = Lit "stmfd sp!, {r4-r10, fp, ip, lr}" in
+    let set_fp = Lit "mov fp, sp" in
+    let set_sp = Lit ("sub sp, sp, #" ^ string_of_int stack_size) in
+    [Lit (label ^ ":")] :: [save_args] :: [save_regs] :: [set_fp] :: [set_sp] :: bodies @ [[Lit "ldmfd sp!, {r4-r10, fp, ip, lr}"]]
     
 let translate_global (label, size) = [[Lit (".comm " ^ label ^ ", " ^ string_of_int size ^ ", 4")]]
     
