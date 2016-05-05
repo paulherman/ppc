@@ -418,7 +418,7 @@ let process_allocs frame_size instrs =
 let translate_proc (label, proc_level, num_args, num_reg_vars, frame_size, irs) = 
     let alloc_body = translate irs in
     let spills = count_spills alloc_body in
-    let stack_size = 4 * spills in
+    let stack_size = 4 * spills + frame_size in
     let bodies = process_allocs frame_size alloc_body in
     let save_args = if num_args <= 2 then Lit "stmfd sp!, {r0-r1}" else Lit "stmfd sp!, {r0-r3}" in
     let save_regs = Lit "stmfd sp!, {r4-r10, fp, ip, lr}" in
