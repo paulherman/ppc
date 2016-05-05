@@ -12,4 +12,9 @@ simp.ml
 tran.ml
 ppc
 unittest
+tools/nclex.ml
+tools/ncparse.ml
+tools/ncparse.mli
+tools/ncparse.output
+tools/nodexp
 _build
