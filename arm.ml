@@ -98,6 +98,12 @@ let arm_rules = [
     );
     Rule (
         "addr",
+        PNode (BINOP PlusA, [NonTerm "reg"; PNode (BINOP Lsl, [NonTerm "reg"; GTerm (CONST 0, fun (CONST n) -> n < 32)])]),
+        0,
+        fun [_; Left r0; _; Left r1; Right (CONST n)] -> [ArmInstrPart ([Lit "["; In; Lit ", "; In; Lit (", #" ^ string_of_int n ^ "]")], [r0; r1])]
+    );
+    Rule (
+        "addr",
         NonTerm "reg",
         0,
         fun [Left r] -> [ArmInstrPart ([Lit "["; In; Lit "]"], [r])]
