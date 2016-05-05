@@ -28,3 +28,4 @@ clean: force
 	rm -f ppc unittest
 	rm -f $(MLGEN)
 	rm -rf _build
+	rm -f tools/nodexp tools/nclex.ml tools/ncparse.ml tools/ncparse.mli tools/ncparse.output
