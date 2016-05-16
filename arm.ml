@@ -170,6 +170,12 @@ let arm_rules = [
     );
     Rule (
         "reg",
+        PNode (BINOP Eq, [NonTerm "reg"; NonTerm "op"]),
+        1,
+        fun [_; Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; Out; Lit ", "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit "mov "; Out; Lit ", #0"], []); ArmInstrNode ([Lit "moveq "; Out; Lit ", #1"], [])]
+    );
+    Rule (
+        "reg",
         PNode (BINOP PlusA, [NonTerm "reg"; NonTerm "op"]),
         1,
         fun [_; Left r; Left o] -> [ArmInstrNode ([Lit "add "; Out; Lit ", "; In; Lit ", "; In], [r; o])]
@@ -219,7 +225,7 @@ let arm_rules = [
     Rule (
         "stmt",
         Term (JUMP 0),
-        0,
+        1,
         fun [Right (JUMP l)] -> [ArmInstrNode ([Lit ("b .L" ^ string_of_int l)], [])]
     );
     Rule (
@@ -237,25 +243,37 @@ let arm_rules = [
     Rule (
         "stmt",
         PNode (JUMPC (Neq, 0), [NonTerm "reg"; NonTerm "op"]),
-        0,
+        1,
         fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("bne .L" ^ string_of_int l)], [])]
     );
     Rule (
         "stmt",
         PNode (JUMPC (Eq, 0), [NonTerm "reg"; NonTerm "op"]),
-        0,
+        1,
         fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("beq .L" ^ string_of_int l)], [])]
     );
     Rule (
         "stmt",
+        PNode (JUMPC (Geq, 0), [NonTerm "reg"; NonTerm "op"]),
+        1,
+        fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("bgeq .L" ^ string_of_int l)], [])]
+    );
+    Rule (
+        "stmt",
+        PNode (JUMPC (Leq, 0), [NonTerm "reg"; NonTerm "op"]),
+        1,
+        fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("bleq .L" ^ string_of_int l)], [])]
+    );
+    Rule (
+        "stmt",
         PNode (JUMPC (Lt, 0), [NonTerm "reg"; NonTerm "op"]),
-        0,
+        1,
         fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("blt .L" ^ string_of_int l)], [])]
     );
     Rule (
         "stmt",
         PNode (JUMPC (Gt, 0), [NonTerm "reg"; NonTerm "op"]),
-        0,
+        1,
         fun [Right (JUMPC (_, l)); Left r; Left o] -> [ArmInstrNode ([Lit "cmp "; In; Lit ", "; In], [r; o]); ArmInstrNode ([Lit ("bgt .L" ^ string_of_int l)], [])]
     );
     Rule (
