@@ -60,7 +60,7 @@ let pregs_of_active_intervals intervals = List.map (fun (vreg, preg, pregs, s, e
 (* Assign the vreg to some preg, possibly by spilling some other register *)
 let preg_of_vreg ops pregs unassignable unspillable active_intervals spilled_intervals vreg s e = 
     let sorted_intervals = List.sort (fun (v0, p0, ps0, s0, e0) (v1, p1, ps1, s1, e1) -> compare e0 e1) !active_intervals in
-    let active_pregs = pregs_of_active_intervals !active_intervals in
+    let active_pregs = pregs_of_active_intervals (List.filter (fun (_, _, _, _, e0) -> e0 > e) !active_intervals) in
     let empty_regs = list_diff pregs active_pregs in
     (* Search for an empty register *)
     if empty_regs != [] then begin
@@ -86,12 +86,17 @@ let preg_of_vreg ops pregs unassignable unspillable active_intervals spilled_int
     end
     
 
+let string_of_interval = fun (v, _, s, e) -> string_of_int v ^ ": " ^ string_of_int s ^ " -> " ^ string_of_int e
+let print_interval i = print_endline (string_of_interval i)
+
 (* Allocate registers for one instruction *)   
 let reg_alloc_instr regs intervals active_intervals spilled_intervals count instr =
     let (instr, out_reg, in_regs, _, trash_regs) = instr in
     let ops = ref [] in
     (* Remove closed intervals *)
     active_intervals := List.filter (fun (vreg, preg, pregs, s, e) -> e >= count) !active_intervals;
+    print_endline ("Number #" ^ string_of_int count);
+    List.iter print_interval (List.map (fun (v, _, _, s, e) -> (v, [], s, e)) !active_intervals);
     (* Spill or move trashed registers *)
     List.iter (fun preg ->
         if List.exists (fun (v, p, ps, s, e) -> preg = p) !active_intervals then begin
@@ -107,6 +112,7 @@ let reg_alloc_instr regs intervals active_intervals spilled_intervals count inst
     if !intervals != [] then begin
         let (out_reg, pref_regs, s, e) = List.hd !intervals in
         if s = count then begin
+            print_endline ("Allocate " ^ string_of_int out_reg);
             let unspillable = in_regs in
             let preg = preg_of_vreg ops pref_regs [] unspillable active_intervals spilled_intervals out_reg s e in
             ops := Assign (out_reg, preg) :: !ops;
@@ -131,5 +137,6 @@ let reg_alloc (regs : 'b list) (instrs : ('a, 'b) vreg_instr list) =
     let intervals = ref (intervals_of_instrs instrs) in (* List of intervals for vregs ordered by starting position *)
     let active_intervals = ref [] in (* List of active intervals at current instruction *)
     let spilled_intervals = ref [] in (* List of currently spilled intervals *)
+    List.iter print_interval !intervals;
     List.concat (List.mapi (reg_alloc_instr regs intervals active_intervals spilled_intervals) instrs)
     
